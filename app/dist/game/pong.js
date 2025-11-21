@@ -29,7 +29,6 @@ export function createPongGame(canvas, options) {
         mScore: options.maxScore ?? 10,
         winner: null,
     };
-    // -------- PADDLES & BALL -----------------------------------------------
     const paddleWidth = 10;
     const paddleHeight = 70;
     const paddleSpeed = 300;
@@ -51,7 +50,7 @@ export function createPongGame(canvas, options) {
         x: width / 2,
         y: height / 2,
         radius: 6,
-        speed: 260,
+        speed: 26000,
     };
     let ballVx = ball.speed;
     let ballVy = 0;
@@ -131,7 +130,6 @@ export function createPongGame(canvas, options) {
         }
         // Scoring
         if (ball.x + ball.radius < 0) {
-            // Right player scores
             game.rScore++;
             checkGameOver();
             if (game.on) {
@@ -139,7 +137,6 @@ export function createPongGame(canvas, options) {
             }
         }
         else if (ball.x - ball.radius > width) {
-            // Left player scores
             game.lScore++;
             checkGameOver();
             if (game.on) {
