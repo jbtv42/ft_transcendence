@@ -29,8 +29,6 @@ export function createPongGame(canvas: HTMLCanvasElement,
     down: false,
   };
 
-  // -------- PLAYERS -------------------------------------------------------
-
   const leftPlayer: Player = {
     ...options.leftPlayer,
     place: { left: true, right: false },
@@ -93,8 +91,6 @@ export function createPongGame(canvas: HTMLCanvasElement,
 
   resetBall(Math.random() < 0.5 ? 1 : -1);
 
-  // --------------------- UPDATE LOGIC --------------------------------------
-
   function updatePlatformFromKeys(
     platform: Platform,
     upPressed: boolean,
@@ -130,13 +126,11 @@ export function createPongGame(canvas: HTMLCanvasElement,
   }
 
   function updateBall(dt: number): void {
-    // if game already finished, don't move the ball anymore
     if (!game.on) return;
 
     ball.x += ballVx * dt;
     ball.y += ballVy * dt;
 
-    // Top/bottom walls
     if (ball.y - ball.radius < 0) {
       ball.y = ball.radius;
       ballVy = -ballVy;
@@ -145,7 +139,6 @@ export function createPongGame(canvas: HTMLCanvasElement,
       ballVy = -ballVy;
     }
 
-    // Helper: collision with a platform
     function collideWithPlatform(p: Platform): boolean {
       return (
         ball.x - ball.radius < p.x_up + p.width &&
@@ -155,7 +148,6 @@ export function createPongGame(canvas: HTMLCanvasElement,
       );
     }
 
-    // Left paddle collision
     if (ballVx < 0 && collideWithPlatform(leftPaddle)) {
       ball.x = leftPaddle.x_up + leftPaddle.width + ball.radius;
       ballVx = -ballVx;
@@ -164,7 +156,6 @@ export function createPongGame(canvas: HTMLCanvasElement,
       ballVy += hitPos * 200;
     }
 
-    // Right paddle collision
     if (ballVx > 0 && collideWithPlatform(rightPaddle)) {
       ball.x = rightPaddle.x_up - ball.radius;
       ballVx = -ballVx;
@@ -173,7 +164,6 @@ export function createPongGame(canvas: HTMLCanvasElement,
       ballVy += hitPos * 200;
     }
 
-    // Scoring
     if (ball.x + ball.radius < 0) {
       game.rScore++;
       checkGameOver();
@@ -189,18 +179,15 @@ export function createPongGame(canvas: HTMLCanvasElement,
     }
   }
 
-  // --------------------- RENDER -------------------------------------------
 
   function draw(): void {
     if (!ctx)
         throw new Error("Pong game error");
     ctx.clearRect(0, 0, width, height);
 
-    // Background
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, width, height);
 
-    // Center line
     ctx.strokeStyle = "white";
     ctx.lineWidth = 2;
     ctx.setLineDash([6, 6]);
@@ -210,32 +197,26 @@ export function createPongGame(canvas: HTMLCanvasElement,
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Paddles
     ctx.fillStyle = "white";
     ctx.fillRect(leftPaddle.x_up, leftPaddle.y_up, leftPaddle.width, leftPaddle.height);
     ctx.fillRect(rightPaddle.x_up, rightPaddle.y_up, rightPaddle.width, rightPaddle.height);
 
-    // Ball
     if (game.on) {
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // Score
     ctx.font = "20px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(String(game.lScore), width * 0.25, 30);
     ctx.fillText(String(game.rScore), width * 0.75, 30);
 
-    // Winner text when game is over
     if (!game.on && game.winner) {
       ctx.font = "28px system-ui, sans-serif";
       ctx.fillText(`Winner: ${game.winner.name}`, width / 2, height / 2);
     }
   }
-
-  // --------------------- LOOP ---------------------------------------------
 
   let lastTime = 0;
   let animationFrameId: number | null = null;
@@ -255,11 +236,9 @@ export function createPongGame(canvas: HTMLCanvasElement,
 
     draw();
 
-    // keep the loop even after game.on=false so we keep the winner screen
     animationFrameId = window.requestAnimationFrame(loop);
   }
 
-  // --------------------- INPUT -------------------------------------------
 
   function onKeyDown(e: KeyboardEvent): void {
     if (e.key === "w" || e.key === "W") {
@@ -288,10 +267,8 @@ export function createPongGame(canvas: HTMLCanvasElement,
   window.addEventListener("keydown", onKeyDown);
   window.addEventListener("keyup", onKeyUp);
 
-  // Start everything
   animationFrameId = window.requestAnimationFrame(loop);
 
-  // Expose a destroy function (useful later if you change routes / reset game)
   function destroy(): void {
     game.on = false;
     if (animationFrameId !== null) {

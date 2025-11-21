@@ -11,7 +11,6 @@ export function createPongGame(canvas, options) {
         up: false,
         down: false,
     };
-    // -------- PLAYERS -------------------------------------------------------
     const leftPlayer = {
         ...options.leftPlayer,
         place: { left: true, right: false },
@@ -50,7 +49,7 @@ export function createPongGame(canvas, options) {
         x: width / 2,
         y: height / 2,
         radius: 6,
-        speed: 26000,
+        speed: 260,
     };
     let ballVx = ball.speed;
     let ballVy = 0;
@@ -62,7 +61,6 @@ export function createPongGame(canvas, options) {
         ballVy = ball.speed * Math.sin(angle);
     }
     resetBall(Math.random() < 0.5 ? 1 : -1);
-    // --------------------- UPDATE LOGIC --------------------------------------
     function updatePlatformFromKeys(platform, upPressed, downPressed, dt) {
         let vy = 0;
         if (upPressed)
@@ -93,12 +91,10 @@ export function createPongGame(canvas, options) {
         }
     }
     function updateBall(dt) {
-        // if game already finished, don't move the ball anymore
         if (!game.on)
             return;
         ball.x += ballVx * dt;
         ball.y += ballVy * dt;
-        // Top/bottom walls
         if (ball.y - ball.radius < 0) {
             ball.y = ball.radius;
             ballVy = -ballVy;
@@ -107,28 +103,24 @@ export function createPongGame(canvas, options) {
             ball.y = height - ball.radius;
             ballVy = -ballVy;
         }
-        // Helper: collision with a platform
         function collideWithPlatform(p) {
             return (ball.x - ball.radius < p.x_up + p.width &&
                 ball.x + ball.radius > p.x_up &&
                 ball.y + ball.radius > p.y_up &&
                 ball.y - ball.radius < p.y_up + p.height);
         }
-        // Left paddle collision
         if (ballVx < 0 && collideWithPlatform(leftPaddle)) {
             ball.x = leftPaddle.x_up + leftPaddle.width + ball.radius;
             ballVx = -ballVx;
             const hitPos = (ball.y - leftPaddle.y_up) / leftPaddle.height - 0.5;
             ballVy += hitPos * 200;
         }
-        // Right paddle collision
         if (ballVx > 0 && collideWithPlatform(rightPaddle)) {
             ball.x = rightPaddle.x_up - ball.radius;
             ballVx = -ballVx;
             const hitPos = (ball.y - rightPaddle.y_up) / rightPaddle.height - 0.5;
             ballVy += hitPos * 200;
         }
-        // Scoring
         if (ball.x + ball.radius < 0) {
             game.rScore++;
             checkGameOver();
@@ -144,15 +136,12 @@ export function createPongGame(canvas, options) {
             }
         }
     }
-    // --------------------- RENDER -------------------------------------------
     function draw() {
         if (!ctx)
             throw new Error("Pong game error");
         ctx.clearRect(0, 0, width, height);
-        // Background
         ctx.fillStyle = "black";
         ctx.fillRect(0, 0, width, height);
-        // Center line
         ctx.strokeStyle = "white";
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 6]);
@@ -161,28 +150,23 @@ export function createPongGame(canvas, options) {
         ctx.lineTo(width / 2, height);
         ctx.stroke();
         ctx.setLineDash([]);
-        // Paddles
         ctx.fillStyle = "white";
         ctx.fillRect(leftPaddle.x_up, leftPaddle.y_up, leftPaddle.width, leftPaddle.height);
         ctx.fillRect(rightPaddle.x_up, rightPaddle.y_up, rightPaddle.width, rightPaddle.height);
-        // Ball
         if (game.on) {
             ctx.beginPath();
             ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
             ctx.fill();
         }
-        // Score
         ctx.font = "20px system-ui, sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(String(game.lScore), width * 0.25, 30);
         ctx.fillText(String(game.rScore), width * 0.75, 30);
-        // Winner text when game is over
         if (!game.on && game.winner) {
             ctx.font = "28px system-ui, sans-serif";
             ctx.fillText(`Winner: ${game.winner.name}`, width / 2, height / 2);
         }
     }
-    // --------------------- LOOP ---------------------------------------------
     let lastTime = 0;
     let animationFrameId = null;
     function loop(timestamp) {
@@ -197,10 +181,8 @@ export function createPongGame(canvas, options) {
             updateBall(dt);
         }
         draw();
-        // keep the loop even after game.on=false so we keep the winner screen
         animationFrameId = window.requestAnimationFrame(loop);
     }
-    // --------------------- INPUT -------------------------------------------
     function onKeyDown(e) {
         if (e.key === "w" || e.key === "W") {
             keys.w = true;
@@ -231,9 +213,7 @@ export function createPongGame(canvas, options) {
     }
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
-    // Start everything
     animationFrameId = window.requestAnimationFrame(loop);
-    // Expose a destroy function (useful later if you change routes / reset game)
     function destroy() {
         game.on = false;
         if (animationFrameId !== null) {
