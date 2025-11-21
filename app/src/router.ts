@@ -1,3 +1,4 @@
+
 import { renderHomeView } from "./views/homeView.js";
 import { renderTournamentView } from "./views/tournamentView.js";
 import { renderGameView } from "./views/gameView.js";

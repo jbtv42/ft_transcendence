@@ -1,5 +1,7 @@
 import { createPongGame } from "../game/pong.js";
-export function renderGameView(root) {
+export function renderGameView(root, config // 👈 optional now
+) {
+    root.innerHTML = "";
     const title = document.createElement("h1");
     title.textContent = "Pong";
     const info = document.createElement("p");
@@ -13,5 +15,30 @@ export function renderGameView(root) {
     root.appendChild(title);
     root.appendChild(info);
     root.appendChild(canvas);
-    createPongGame(canvas);
+    const leftPlayer = config?.leftPlayer ?? {
+        id: 1,
+        name: "Sam",
+        rank: 0,
+    };
+    const rightPlayer = config?.rightPlayer ?? {
+        id: 2,
+        name: "Bob",
+        rank: 0,
+    };
+    const maxScore = config?.maxScore ?? 5;
+    info.textContent = `${leftPlayer.name} vs ${rightPlayer.name} – first to ${maxScore}`;
+    createPongGame(canvas, {
+        leftPlayer,
+        rightPlayer,
+        maxScore,
+        onGameEnd: (state) => {
+            if (state.winner) {
+                info.textContent = `Winner: ${state.winner.name} (${state.lScore} – ${state.rScore})`;
+            }
+            else {
+                info.textContent = `Game over`;
+            }
+            config?.onGameEnd?.(state);
+        },
+    });
 }

@@ -1,48 +1,19 @@
-type Place = {
-  left: boolean;
-  right: boolean;
+import { Player, Platform, Ball, GameState, KeysState } from "./header.js";
+
+
+type PlayerInput = Omit<Player, "place">;
+
+type PongOptions = {
+  leftPlayer: PlayerInput;
+  rightPlayer: PlayerInput;
+  maxScore?: number;
+  onGameEnd?: (state: GameState) => void;
 };
 
-type Player = {
-  name: string;
-  rank: number;
-  id: number;
-  place: Place;
-};
 
-type Platform = {
-  x_up: number;
-  y_up: number;
-  width: number;
-  height: number;
-  delta_move: number;
-};
+export function createPongGame(canvas: HTMLCanvasElement,
+  options: PongOptions): { destroy: () => void } {
 
-type Ball = {
-  x: number;
-  y: number;
-  radius: number;
-  speed: number;
-};
-
-type GameState = {
-  solo: boolean;
-  mp: boolean;
-  on: boolean;
-  lScore: number;
-  rScore: number;
-  mScore: number;
-  winner: Player | null;
-};
-
-type KeysState = {
-  w: boolean;
-  s: boolean;
-  up: boolean;
-  down: boolean;
-};
-
-export function createPongGame(canvas: HTMLCanvasElement): { destroy: () => void } {
   const ctx = canvas.getContext("2d");
   if (!ctx) {
     throw new Error("Could not get 2D context for Pong");
@@ -61,18 +32,15 @@ export function createPongGame(canvas: HTMLCanvasElement): { destroy: () => void
   // -------- PLAYERS -------------------------------------------------------
 
   const leftPlayer: Player = {
-    name: "Sam",
-    rank: 0,
-    id: 1,
+    ...options.leftPlayer,
     place: { left: true, right: false },
   };
 
   const rightPlayer: Player = {
-    name: "Bob",
-    rank: 0,
-    id: 2,
+    ...options.rightPlayer,
     place: { left: false, right: true },
   };
+
 
   const game: GameState = {
     solo: false,
@@ -80,9 +48,10 @@ export function createPongGame(canvas: HTMLCanvasElement): { destroy: () => void
     on: true,
     lScore: 0,
     rScore: 0,
-    mScore: 10,     // stop when one player reaches 10
+    mScore: options.maxScore ?? 10,
     winner: null,
   };
+
 
   // -------- PADDLES & BALL -----------------------------------------------
 
@@ -153,11 +122,13 @@ export function createPongGame(canvas: HTMLCanvasElement): { destroy: () => void
       game.winner = leftPlayer;
       leftPlayer.rank = 1;
       rightPlayer.rank = 2;
+      options.onGameEnd?.(game);
     } else if (game.rScore >= game.mScore) {
       game.on = false;
       game.winner = rightPlayer;
       rightPlayer.rank = 1;
       leftPlayer.rank = 2;
+      options.onGameEnd?.(game);
     }
   }
 
@@ -228,7 +199,6 @@ export function createPongGame(canvas: HTMLCanvasElement): { destroy: () => void
   function draw(): void {
     if (!ctx)
         throw new Error("Pong game error");
-
     ctx.clearRect(0, 0, width, height);
 
     // Background

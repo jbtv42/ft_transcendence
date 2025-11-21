@@ -1,4 +1,4 @@
-export function createPongGame(canvas) {
+export function createPongGame(canvas, options) {
     const ctx = canvas.getContext("2d");
     if (!ctx) {
         throw new Error("Could not get 2D context for Pong");
@@ -13,15 +13,11 @@ export function createPongGame(canvas) {
     };
     // -------- PLAYERS -------------------------------------------------------
     const leftPlayer = {
-        name: "Sam",
-        rank: 0,
-        id: 1,
+        ...options.leftPlayer,
         place: { left: true, right: false },
     };
     const rightPlayer = {
-        name: "Bob",
-        rank: 0,
-        id: 2,
+        ...options.rightPlayer,
         place: { left: false, right: true },
     };
     const game = {
@@ -30,7 +26,7 @@ export function createPongGame(canvas) {
         on: true,
         lScore: 0,
         rScore: 0,
-        mScore: 10, // stop when one player reaches 10
+        mScore: options.maxScore ?? 10,
         winner: null,
     };
     // -------- PADDLES & BALL -----------------------------------------------
@@ -87,12 +83,14 @@ export function createPongGame(canvas) {
             game.winner = leftPlayer;
             leftPlayer.rank = 1;
             rightPlayer.rank = 2;
+            options.onGameEnd?.(game);
         }
         else if (game.rScore >= game.mScore) {
             game.on = false;
             game.winner = rightPlayer;
             rightPlayer.rank = 1;
             leftPlayer.rank = 2;
+            options.onGameEnd?.(game);
         }
     }
     function updateBall(dt) {
