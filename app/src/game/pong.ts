@@ -52,9 +52,6 @@ export function createPongGame(canvas: HTMLCanvasElement,
     winner: null,
   };
 
-
-  // -------- PADDLES & BALL -----------------------------------------------
-
   const paddleWidth = 10;
   const paddleHeight = 70;
   const paddleSpeed = 300;
@@ -178,14 +175,12 @@ export function createPongGame(canvas: HTMLCanvasElement,
 
     // Scoring
     if (ball.x + ball.radius < 0) {
-      // Right player scores
       game.rScore++;
       checkGameOver();
       if (game.on) {
         resetBall(1);
       }
     } else if (ball.x - ball.radius > width) {
-      // Left player scores
       game.lScore++;
       checkGameOver();
       if (game.on) {
