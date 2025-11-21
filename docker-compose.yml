@@ -1,0 +1,11 @@
+
+services:
+  web:
+    build: ./nginx
+    container_name: transcendence-nginx
+    ports:
+      - "8443:443"
+    volumes:
+      - ./app:/var/www/html:ro          # static files (later: built TS app)
+      - ./secrets/certs:/etc/nginx/certs:ro  # TLS certs (not in git)
+    restart: unless-stopped
