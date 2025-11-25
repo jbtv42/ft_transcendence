@@ -1,4 +1,3 @@
-
 services:
   web:
     build: ./nginx
@@ -6,6 +5,41 @@ services:
     ports:
       - "8443:443"
     volumes:
-      - ./app:/var/www/html:ro          # static files (later: built TS app)
-      - ./secrets/certs:/etc/nginx/certs:ro  # TLS certs (not in git)
-    restart: unless-stopped
+      - ./app:/var/www/html:ro
+      - ./secrets/certs:/etc/nginx/certs:ro
+    depends_on:
+      - php
+      - mariadb
+    networks:
+      - appnet
+
+  php:
+    build: ./php
+    container_name: transcendence-php
+    volumes:
+      - ./app:/var/www/html
+    environment:
+      DB_HOST: mariadb
+      DB_PORT: 3306
+      DB_USER: transcendence
+      DB_PASSWORD: secret
+      DB_NAME: transcendence
+    networks:
+      - appnet
+
+  mariadb:
+    image: mariadb:11
+    container_name: transcendence-mariadb
+    environment:
+      MARIADB_DATABASE: transcendence
+      MARIADB_USER: transcendence
+      MARIADB_PASSWORD: secret
+      MARIADB_ROOT_PASSWORD: supersecret
+    volumes:
+      - ./mariadb:/var/lib/mysql
+    networks:
+      - appnet
+
+networks:
+  appnet:
+    driver: bridge

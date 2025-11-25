@@ -43,9 +43,12 @@ export function renderTournamentView(root: HTMLElement): void {
       rank: 0,
     }));
 
-    info.textContent = 
-        `Semi-final 1: ${players[0].name} vs ${players[1].name} | ` +
-        `Semi-final 2: ${players[2].name} vs ${players[3].name} — starting in 2 seconds...`;
+    info.style.whiteSpace = "pre-line";
+    info.textContent =
+    `Semi-final 1: ${players[0].name} vs ${players[1].name}\n` +
+    `Semi-final 2: ${players[2].name} vs ${players[3].name}\n` +
+    `— starting in 5 seconds...`;
+
 
     startBtn.disabled = true;
     inputs.forEach((input) => (input.disabled = true));

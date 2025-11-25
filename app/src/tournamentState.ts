@@ -52,7 +52,6 @@ export function addPlayer(alias: string): { ok: boolean; error?: string } {
     return { ok: false, error: "Alias must be at most 16 characters." };
   }
 
-  // Prevent duplicates (case-insensitive)
   const lower = trimmed.toLowerCase();
   const exists = state.players.some(
     (p) => p.alias.toLowerCase() === lower
@@ -66,7 +65,6 @@ export function addPlayer(alias: string): { ok: boolean; error?: string } {
     alias: trimmed,
   });
 
-  // Tournament must be rebuilt if players change after start; for now, force reset.
   if (state.started) {
     state.started = false;
     state.matches = [];
@@ -85,13 +83,12 @@ export function startTournament(): { ok: boolean; error?: string } {
     return { ok: false, error: "At least 2 players are required." };
   }
 
-  // Simple pairing: players in order (p1 vs p2, p3 vs p4, etc.)
-  const players = [...state.players]; // copy
+  const players = [...state.players];
   const matches: Match[] = [];
 
   for (let i = 0; i < players.length; i += 2) {
     const playerA = players[i];
-    const playerB = players[i + 1] ?? null; // odd player gets bye
+    const playerB = players[i + 1] ?? null;
 
     matches.push({
       id: nextMatchId++,
@@ -120,18 +117,15 @@ export function getUpcomingMatches(): Match[] {
   return state.matches.slice(state.currentMatchIndex + 1);
 }
 
-// We’ll call this later from the Game view when someone wins.
 export function setMatchWinner(winnerAlias: string): void {
   const current = getCurrentMatch();
   if (!current) return;
 
   current.winnerAlias = winnerAlias;
 
-  // Advance to next match if any
   if (state.currentMatchIndex < state.matches.length - 1) {
     state.currentMatchIndex++;
   } else {
-    // Tournament finished
     state.currentMatchIndex = state.matches.length;
   }
 }

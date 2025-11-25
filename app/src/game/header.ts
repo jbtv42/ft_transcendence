@@ -21,6 +21,8 @@ export type Platform = {
 export type Ball = {
   x: number;
   y: number;
+  vx: number;
+  vy: number;
   radius: number;
   speed: number;
 };
@@ -41,6 +43,15 @@ export type KeysState = {
   up: boolean;
   down: boolean;
 };
+
+export type AI = {
+  paddle: Platform,
+  ball: Ball,
+  dt: number
+};
+
+export type AiMove = -1 | 1 | 0;
+
 
 class Timer {
     constructor(public counter = 3) {

@@ -1,19 +1,23 @@
 import { createPongGame } from "../game/pong.js";
 import type { Player, GameState } from "../game/header.js";
 
-// a Player without the `place` field (place is internal to the game)
 type PlayerInput = Omit<Player, "place">;
 
-type GameViewConfig = {
+type AiLevel = 1 | 2 | 3 | 4;
+
+export type GameViewConfig = {
   leftPlayer?: PlayerInput;
   rightPlayer?: PlayerInput;
   maxScore?: number;
   onGameEnd?: (state: GameState) => void;
+  mode?: "mp" | "soloLeft" | "soloRight";
+  aiLevel?: AiLevel;
 };
+
 
 export function renderGameView(
   root: HTMLElement,
-  config?: GameViewConfig           // 👈 optional now
+  config?: GameViewConfig
 ): void {
   root.innerHTML = "";
 

@@ -1,8 +1,22 @@
+import { moveai_1, moveai_2, moveai_3, moveai_4 } from "./ai.js";
+function computeAiDir(level, paddle, ball, w, h, ai, fieldWidth, fieldHeight, isRightPaddle, opponent) {
+    switch (level) {
+        case 1: return moveai_1(ai, fieldWidth, fieldHeight, isRightPaddle);
+        case 2: return moveai_2(ai, fieldWidth, fieldHeight, isRightPaddle);
+        case 3: return moveai_3(ai, fieldWidth, fieldHeight, isRightPaddle);
+        case 4: return moveai_4(ai, fieldWidth, fieldHeight, isRightPaddle, opponent);
+        default: return 0;
+    }
+}
 export function createPongGame(canvas, options) {
     const ctx = canvas.getContext("2d");
     if (!ctx) {
         throw new Error("Could not get 2D context for Pong");
     }
+    const aiSide = options.aiSide;
+    const aiLevel = options.aiLevel ?? 1;
+    let aiTimer = 0;
+    let aiDir = 0;
     const width = canvas.width;
     const height = canvas.height;
     const keys = {
@@ -11,7 +25,6 @@ export function createPongGame(canvas, options) {
         up: false,
         down: false,
     };
-    // -------- PLAYERS -------------------------------------------------------
     const leftPlayer = {
         ...options.leftPlayer,
         place: { left: true, right: false },
@@ -50,7 +63,9 @@ export function createPongGame(canvas, options) {
         x: width / 2,
         y: height / 2,
         radius: 6,
-        speed: 26000,
+        speed: 260,
+        vx: 0,
+        vy: 0,
     };
     let ballVx = ball.speed;
     let ballVy = 0;
@@ -62,7 +77,6 @@ export function createPongGame(canvas, options) {
         ballVy = ball.speed * Math.sin(angle);
     }
     resetBall(Math.random() < 0.5 ? 1 : -1);
-    // --------------------- UPDATE LOGIC --------------------------------------
     function updatePlatformFromKeys(platform, upPressed, downPressed, dt) {
         let vy = 0;
         if (upPressed)
@@ -93,12 +107,10 @@ export function createPongGame(canvas, options) {
         }
     }
     function updateBall(dt) {
-        // if game already finished, don't move the ball anymore
         if (!game.on)
             return;
         ball.x += ballVx * dt;
         ball.y += ballVy * dt;
-        // Top/bottom walls
         if (ball.y - ball.radius < 0) {
             ball.y = ball.radius;
             ballVy = -ballVy;
@@ -107,28 +119,24 @@ export function createPongGame(canvas, options) {
             ball.y = height - ball.radius;
             ballVy = -ballVy;
         }
-        // Helper: collision with a platform
         function collideWithPlatform(p) {
             return (ball.x - ball.radius < p.x_up + p.width &&
                 ball.x + ball.radius > p.x_up &&
                 ball.y + ball.radius > p.y_up &&
                 ball.y - ball.radius < p.y_up + p.height);
         }
-        // Left paddle collision
         if (ballVx < 0 && collideWithPlatform(leftPaddle)) {
             ball.x = leftPaddle.x_up + leftPaddle.width + ball.radius;
             ballVx = -ballVx;
             const hitPos = (ball.y - leftPaddle.y_up) / leftPaddle.height - 0.5;
             ballVy += hitPos * 200;
         }
-        // Right paddle collision
         if (ballVx > 0 && collideWithPlatform(rightPaddle)) {
             ball.x = rightPaddle.x_up - ball.radius;
             ballVx = -ballVx;
             const hitPos = (ball.y - rightPaddle.y_up) / rightPaddle.height - 0.5;
             ballVy += hitPos * 200;
         }
-        // Scoring
         if (ball.x + ball.radius < 0) {
             game.rScore++;
             checkGameOver();
@@ -144,15 +152,12 @@ export function createPongGame(canvas, options) {
             }
         }
     }
-    // --------------------- RENDER -------------------------------------------
     function draw() {
         if (!ctx)
             throw new Error("Pong game error");
         ctx.clearRect(0, 0, width, height);
-        // Background
         ctx.fillStyle = "black";
         ctx.fillRect(0, 0, width, height);
-        // Center line
         ctx.strokeStyle = "white";
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 6]);
@@ -161,28 +166,23 @@ export function createPongGame(canvas, options) {
         ctx.lineTo(width / 2, height);
         ctx.stroke();
         ctx.setLineDash([]);
-        // Paddles
         ctx.fillStyle = "white";
         ctx.fillRect(leftPaddle.x_up, leftPaddle.y_up, leftPaddle.width, leftPaddle.height);
         ctx.fillRect(rightPaddle.x_up, rightPaddle.y_up, rightPaddle.width, rightPaddle.height);
-        // Ball
         if (game.on) {
             ctx.beginPath();
             ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
             ctx.fill();
         }
-        // Score
         ctx.font = "20px system-ui, sans-serif";
         ctx.textAlign = "center";
         ctx.fillText(String(game.lScore), width * 0.25, 30);
         ctx.fillText(String(game.rScore), width * 0.75, 30);
-        // Winner text when game is over
         if (!game.on && game.winner) {
             ctx.font = "28px system-ui, sans-serif";
             ctx.fillText(`Winner: ${game.winner.name}`, width / 2, height / 2);
         }
     }
-    // --------------------- LOOP ---------------------------------------------
     let lastTime = 0;
     let animationFrameId = null;
     function loop(timestamp) {
@@ -192,15 +192,45 @@ export function createPongGame(canvas, options) {
         const dt = (timestamp - lastTime) / 1000;
         lastTime = timestamp;
         if (game.on) {
-            updatePlatformFromKeys(leftPaddle, keys.w, keys.s, dt);
-            updatePlatformFromKeys(rightPaddle, keys.up, keys.down, dt);
+            if (aiSide === "left") {
+                updatePlatformFromKeys(rightPaddle, keys.up, keys.down, dt);
+                aiTimer += dt;
+                if (aiTimer >= 1.0) {
+                    aiTimer -= 1.0;
+                    const aiState = {
+                        paddle: leftPaddle,
+                        ball,
+                        dt: 1.0, // horizon for your AI logic
+                    };
+                    aiDir = computeAiDir(aiLevel, leftPaddle, ball, width, height, aiState, width, height, false, rightPaddle);
+                }
+                updatePlatformFromKeys(leftPaddle, aiDir === -1, // up
+                aiDir === 1, // down
+                dt);
+            }
+            else if (aiSide === "right") {
+                updatePlatformFromKeys(leftPaddle, keys.w, keys.s, dt);
+                aiTimer += dt;
+                if (aiTimer >= 1.0) {
+                    aiTimer -= 1.0;
+                    const aiState = {
+                        paddle: rightPaddle,
+                        ball,
+                        dt: 1.0,
+                    };
+                    aiDir = computeAiDir(aiLevel, rightPaddle, ball, width, height, aiState, width, height, true, leftPaddle);
+                }
+                updatePlatformFromKeys(rightPaddle, aiDir === -1, aiDir === 1, dt);
+            }
+            else {
+                updatePlatformFromKeys(leftPaddle, keys.w, keys.s, dt);
+                updatePlatformFromKeys(rightPaddle, keys.up, keys.down, dt);
+            }
             updateBall(dt);
         }
         draw();
-        // keep the loop even after game.on=false so we keep the winner screen
         animationFrameId = window.requestAnimationFrame(loop);
     }
-    // --------------------- INPUT -------------------------------------------
     function onKeyDown(e) {
         if (e.key === "w" || e.key === "W") {
             keys.w = true;
@@ -231,9 +261,7 @@ export function createPongGame(canvas, options) {
     }
     window.addEventListener("keydown", onKeyDown);
     window.addEventListener("keyup", onKeyUp);
-    // Start everything
     animationFrameId = window.requestAnimationFrame(loop);
-    // Expose a destroy function (useful later if you change routes / reset game)
     function destroy() {
         game.on = false;
         if (animationFrameId !== null) {
