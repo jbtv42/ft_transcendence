@@ -1,6 +1,5 @@
 import { createPongGame } from "../game/pong.js";
-export function renderGameView(root, config // 👈 optional now
-) {
+export function renderGameView(root, config) {
     root.innerHTML = "";
     const title = document.createElement("h1");
     title.textContent = "Pong";

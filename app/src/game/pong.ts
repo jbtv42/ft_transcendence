@@ -1,15 +1,39 @@
-import { Player, Platform, Ball, GameState, KeysState } from "./header.js";
-
+import { Player, Platform, Ball, GameState, KeysState, AI, AiMove } from "./header.js";
+import { moveai_1, moveai_2, moveai_3, moveai_4 } from "./ai.js";
 
 type PlayerInput = Omit<Player, "place">;
+type AiLevel = 1 | 2 | 3 | 4;
 
 type PongOptions = {
   leftPlayer: PlayerInput;
   rightPlayer: PlayerInput;
   maxScore?: number;
   onGameEnd?: (state: GameState) => void;
+
+  aiSide?: "left" | "right";
+  aiLevel?: AiLevel;
 };
 
+function computeAiDir(
+    level: AiLevel,
+    paddle: Platform,
+    ball: Ball,
+    w: number,
+    h: number,
+    ai : AI,
+    fieldWidth : number,
+    fieldHeight : number,
+    isRightPaddle : boolean,
+    opponent : Platform
+  ): AiMove {
+    switch (level) {
+      case 1: return moveai_1(ai, fieldWidth, fieldHeight, isRightPaddle)
+      case 2: return moveai_2(ai, fieldWidth, fieldHeight, isRightPaddle)
+      case 3: return moveai_3(ai, fieldWidth, fieldHeight, isRightPaddle)
+      case 4: return moveai_4(ai, fieldWidth, fieldHeight, isRightPaddle, opponent)
+      default: return 0;
+    }
+}
 
 export function createPongGame(canvas: HTMLCanvasElement,
   options: PongOptions): { destroy: () => void } {
@@ -18,6 +42,12 @@ export function createPongGame(canvas: HTMLCanvasElement,
   if (!ctx) {
     throw new Error("Could not get 2D context for Pong");
   }
+
+  const aiSide = options.aiSide;
+  const aiLevel: AiLevel = options.aiLevel ?? 1;
+
+  let aiTimer = 0;
+  let aiDir: AiMove = 0;
 
   const width = canvas.width;
   const height = canvas.height;
@@ -75,6 +105,8 @@ export function createPongGame(canvas: HTMLCanvasElement,
     y: height / 2,
     radius: 6,
     speed: 260,
+    vx: 0,
+    vy: 0,
   };
 
   let ballVx = ball.speed;
@@ -221,23 +253,94 @@ export function createPongGame(canvas: HTMLCanvasElement,
   let lastTime = 0;
   let animationFrameId: number | null = null;
 
-  function loop(timestamp: number): void {
-    if (lastTime === 0) {
-      lastTime = timestamp;
-    }
-    const dt = (timestamp - lastTime) / 1000;
+function loop(timestamp: number): void {
+  if (lastTime === 0) {
     lastTime = timestamp;
+  }
+  const dt = (timestamp - lastTime) / 1000;
+  lastTime = timestamp;
 
-    if (game.on) {
+  if (game.on) {
+    if (aiSide === "left") {
+      updatePlatformFromKeys(rightPaddle, keys.up, keys.down, dt);
+
+      aiTimer += dt;
+      if (aiTimer >= 1.0) {
+        aiTimer -= 1.0;
+
+        const aiState: AI = {
+          paddle: leftPaddle,
+          ball,
+          dt: 1.0, // horizon for your AI logic
+        };
+
+        aiDir = computeAiDir(
+          aiLevel,
+          leftPaddle,
+          ball,
+          width,
+          height,
+          aiState,
+          width,
+          height,
+          false,
+          rightPaddle
+        );
+      }
+
+      updatePlatformFromKeys(
+        leftPaddle,
+        aiDir === -1,  // up
+        aiDir === 1,   // down
+        dt
+      );
+
+    } else if (aiSide === "right") {
+      updatePlatformFromKeys(leftPaddle, keys.w, keys.s, dt);
+
+      aiTimer += dt;
+      if (aiTimer >= 1.0) {
+        aiTimer -= 1.0;
+
+        const aiState: AI = {
+          paddle: rightPaddle,
+          ball,
+          dt: 1.0,
+        };
+
+        aiDir = computeAiDir(
+          aiLevel,
+          rightPaddle,
+          ball,
+          width,
+          height,
+          aiState,
+          width,
+          height,
+          true,
+          leftPaddle
+        );
+      }
+
+      updatePlatformFromKeys(
+        rightPaddle,
+        aiDir === -1,
+        aiDir === 1,
+        dt
+      );
+
+    } else {
       updatePlatformFromKeys(leftPaddle, keys.w, keys.s, dt);
       updatePlatformFromKeys(rightPaddle, keys.up, keys.down, dt);
-      updateBall(dt);
     }
 
-    draw();
-
-    animationFrameId = window.requestAnimationFrame(loop);
+    updateBall(dt);
   }
+
+  draw();
+  animationFrameId = window.requestAnimationFrame(loop);
+}
+
 
 
   function onKeyDown(e: KeyboardEvent): void {

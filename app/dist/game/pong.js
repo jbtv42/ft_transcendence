@@ -1,8 +1,22 @@
+import { moveai_1, moveai_2, moveai_3, moveai_4 } from "./ai.js";
+function computeAiDir(level, paddle, ball, w, h, ai, fieldWidth, fieldHeight, isRightPaddle, opponent) {
+    switch (level) {
+        case 1: return moveai_1(ai, fieldWidth, fieldHeight, isRightPaddle);
+        case 2: return moveai_2(ai, fieldWidth, fieldHeight, isRightPaddle);
+        case 3: return moveai_3(ai, fieldWidth, fieldHeight, isRightPaddle);
+        case 4: return moveai_4(ai, fieldWidth, fieldHeight, isRightPaddle, opponent);
+        default: return 0;
+    }
+}
 export function createPongGame(canvas, options) {
     const ctx = canvas.getContext("2d");
     if (!ctx) {
         throw new Error("Could not get 2D context for Pong");
     }
+    const aiSide = options.aiSide;
+    const aiLevel = options.aiLevel ?? 1;
+    let aiTimer = 0;
+    let aiDir = 0;
     const width = canvas.width;
     const height = canvas.height;
     const keys = {
@@ -50,6 +64,8 @@ export function createPongGame(canvas, options) {
         y: height / 2,
         radius: 6,
         speed: 260,
+        vx: 0,
+        vy: 0,
     };
     let ballVx = ball.speed;
     let ballVy = 0;
@@ -176,8 +192,40 @@ export function createPongGame(canvas, options) {
         const dt = (timestamp - lastTime) / 1000;
         lastTime = timestamp;
         if (game.on) {
-            updatePlatformFromKeys(leftPaddle, keys.w, keys.s, dt);
-            updatePlatformFromKeys(rightPaddle, keys.up, keys.down, dt);
+            if (aiSide === "left") {
+                updatePlatformFromKeys(rightPaddle, keys.up, keys.down, dt);
+                aiTimer += dt;
+                if (aiTimer >= 1.0) {
+                    aiTimer -= 1.0;
+                    const aiState = {
+                        paddle: leftPaddle,
+                        ball,
+                        dt: 1.0, // horizon for your AI logic
+                    };
+                    aiDir = computeAiDir(aiLevel, leftPaddle, ball, width, height, aiState, width, height, false, rightPaddle);
+                }
+                updatePlatformFromKeys(leftPaddle, aiDir === -1, // up
+                aiDir === 1, // down
+                dt);
+            }
+            else if (aiSide === "right") {
+                updatePlatformFromKeys(leftPaddle, keys.w, keys.s, dt);
+                aiTimer += dt;
+                if (aiTimer >= 1.0) {
+                    aiTimer -= 1.0;
+                    const aiState = {
+                        paddle: rightPaddle,
+                        ball,
+                        dt: 1.0,
+                    };
+                    aiDir = computeAiDir(aiLevel, rightPaddle, ball, width, height, aiState, width, height, true, leftPaddle);
+                }
+                updatePlatformFromKeys(rightPaddle, aiDir === -1, aiDir === 1, dt);
+            }
+            else {
+                updatePlatformFromKeys(leftPaddle, keys.w, keys.s, dt);
+                updatePlatformFromKeys(rightPaddle, keys.up, keys.down, dt);
+            }
             updateBall(dt);
         }
         draw();
