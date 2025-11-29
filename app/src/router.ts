@@ -1,8 +1,6 @@
-
 import { renderHomeView } from "./views/homeView.js";
 import { renderTournamentView } from "./views/tournamentView.js";
 import { renderGameView } from "./views/gameView.js";
-
 
 type Route = "home" | "tournament" | "game";
 
@@ -50,7 +48,10 @@ function renderRoute(): void {
       renderTournamentView(viewContainer);
       break;
     case "game":
-      renderGameView(viewContainer);
+      renderGameView(viewContainer, {
+        mode: "soloRight",  // <- AI on right side
+        aiLevel: 2,
+      });
       break;
   }
 }
@@ -63,3 +64,4 @@ export function initRouter(): void {
   window.addEventListener("hashchange", renderRoute);
   renderRoute();
 }
+

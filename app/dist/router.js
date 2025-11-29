@@ -39,7 +39,10 @@ function renderRoute() {
             renderTournamentView(viewContainer);
             break;
         case "game":
-            renderGameView(viewContainer);
+            renderGameView(viewContainer, {
+                mode: "soloRight", // <- AI on right side
+                aiLevel: 2,
+            });
             break;
     }
 }
