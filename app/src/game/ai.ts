@@ -1,6 +1,6 @@
 import { Platform, Ball, AI } from "./header.js";
 
-// Predict ball Y when it reaches the paddle's X, with wall bounces.
+// SELECT AI TARGET
 function predictBallYAtPaddle(
   ball: Ball,
   paddleX: number,
@@ -27,7 +27,7 @@ function predictBallYAtPaddle(
       y = 2 * h - y;
     }
   }
-
+  // UNPRESISE TARGETING
   if (noiseRange > 0)
   {
     const noise = (Math.random() - 0.5) * 2 * noiseRange;
@@ -40,7 +40,6 @@ function predictBallYAtPaddle(
   return y;
 }
 
-// Core AI: predict intercept Y and store it in ai.target
 function setSimpleTarget(
   ai: AI,
   fieldWidth: number,
@@ -53,10 +52,9 @@ function setSimpleTarget(
 
   const paddleCenter = paddle.y_up + paddle.height / 2;
 
-  // Choose the x we want to intercept at:
   const paddleX = isRightPaddle
-    ? paddle.x_up                // right paddle
-    : paddle.x_up + paddle.width; // left paddle
+    ? paddle.x_up
+    : paddle.x_up + paddle.width;
 
   const predictedY = predictBallYAtPaddle(
     ball,
@@ -67,12 +65,11 @@ function setSimpleTarget(
     noiseRange
   );
 
-  // If we can't predict (ball going away / weird), stay where we are
   ai.target = predictedY ?? paddleCenter;
 }
 
-// --------- AI LEVEL 1–4: all identical for now ---------
 
+// CHANGE LAST NUMBER FOR PRESISION TARGET
 export function moveai_1(
   ai: AI,
   fieldWidth: number,
@@ -105,7 +102,7 @@ export function moveai_4(
   fieldWidth: number,
   fieldHeight: number,
   isRightPaddle: boolean,
-  _opponent: Platform  // kept for signature compatibility, not used for now
+  _opponent: Platform
 ): void {
   setSimpleTarget(ai, fieldWidth, fieldHeight, isRightPaddle, 40);
 }

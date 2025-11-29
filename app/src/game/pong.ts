@@ -13,7 +13,7 @@ type PongOptions = {
   aiSide?: "left" | "right";
   aiLevel?: AiLevel;
 };
-
+// AI TARGET SELECTION
 function callAiAndSetTarget(
   level: AiLevel,
   aiState: AI,
@@ -36,9 +36,9 @@ function callAiAndSetTarget(
       moveai_4(aiState, fieldWidth, fieldHeight, isRightPaddle, opponent);
       break;
   }
-  // ⬆️ IMPORTANT: moveai_* must set aiState.target to the desired paddle center Y.
 }
 
+//PONG GAME (NOT WEB PAGE)
 export function createPongGame(
   canvas: HTMLCanvasElement,
   options: PongOptions
@@ -54,7 +54,7 @@ export function createPongGame(
   const width = canvas.width;
   const height = canvas.height;
 
-  // ----------------- INPUT STATE -----------------
+  // INPUT STATE
   const keys: KeysState = {
     w: false,
     s: false,
@@ -84,10 +84,10 @@ export function createPongGame(
     winner: null,
   };
 
-  // ----------------- PADDLES & BALL -----------------
+  // PADDLES & BALL
   const paddleWidth = 10;
   const paddleHeight = 70;
-  const paddleSpeed = 180; // slower so AI doesn't sweep the whole field in 1s
+  const paddleSpeed = 180;
 
   const leftPaddle: Platform = {
     x_up: 20,
@@ -119,21 +119,19 @@ export function createPongGame(
   ball.vx = ballVx;
   ball.vy = ballVy;
 
-  // Count how many times the ball hits *any* paddle
+  // BALL SPEED
   let rallyCount = 0;
 
   function increaseBallSpeed(delta: number): void {
     const newSpeed = ball.speed + delta;
     ball.speed = newSpeed;
 
-    // Rescale current velocity vector to have magnitude = newSpeed
     const currentSpeed = Math.sqrt(ballVx * ballVx + ballVy * ballVy) || 1;
     const factor = newSpeed / currentSpeed;
 
     ballVx *= factor;
     ballVy *= factor;
 
-    // Keep AI view in sync (will also be updated in updateBall)
     ball.vx = ballVx;
     ball.vy = ballVy;
   }
@@ -141,7 +139,6 @@ export function createPongGame(
   function onPaddleHit(): void {
     rallyCount++;
     if (rallyCount % 4 === 0) {
-      // every 4 exchanges, +10 speed
       increaseBallSpeed(10);
     }
   }
@@ -150,7 +147,7 @@ export function createPongGame(
     ball.x = width / 2;
     ball.y = height / 2;
 
-    const angle = (Math.random() * Math.PI) / 3 - Math.PI / 6; // [-30°, +30°]
+    const angle = (Math.random() * Math.PI) / 3 - Math.PI / 6;
     ballVx = direction * ball.speed * Math.cos(angle);
     ballVy = ball.speed * Math.sin(angle);
 
@@ -160,21 +157,18 @@ export function createPongGame(
 
   resetBall(Math.random() < 0.5 ? 1 : -1);
 
-  // ----------------- AI STATE -----------------
-  const AI_UPDATE_INTERVAL = 1.0; // seconds – allowed by subject
+  // AI STATE 
+  const AI_UPDATE_INTERVAL = 1.0;
 
   let aiTimer = 0;
   let aiDir: AiMove = 0;
-
-  // time (in seconds) we still need to move in current direction
   let aiMoveTimeRemaining = 0;
 
-  // we keep a single AI state and reuse it
   const aiState: AI = {
     paddle: aiSide === "right" ? rightPaddle : leftPaddle,
     ball,
     dt: AI_UPDATE_INTERVAL,
-    target: 0, // will be set by moveai_*
+    target: 0,
   };
 
   function updatePlatformFromKeys(
@@ -195,6 +189,7 @@ export function createPongGame(
     }
   }
 
+  // GAME END
   function checkGameOver(): void {
     if (game.lScore >= game.mScore) {
       game.on = false;
@@ -211,13 +206,13 @@ export function createPongGame(
     }
   }
 
+  // BALL MOVE
   function updateBall(dt: number): void {
     if (!game.on) return;
 
     ball.x += ballVx * dt;
     ball.y += ballVy * dt;
 
-    // Top / bottom walls
     if (ball.y - ball.radius < 0) {
       ball.y = ball.radius;
       ballVy = -ballVy;
@@ -235,7 +230,6 @@ export function createPongGame(
       );
     }
 
-    // Left paddle
     if (ballVx < 0 && collideWithPlatform(leftPaddle)) {
       ball.x = leftPaddle.x_up + leftPaddle.width + ball.radius;
       ballVx = -ballVx;
@@ -256,8 +250,6 @@ export function createPongGame(
       onPaddleHit();
     }
 
-
-    // Scoring
     if (ball.x + ball.radius < 0) {
       game.rScore++;
       checkGameOver();
@@ -268,11 +260,11 @@ export function createPongGame(
       if (game.on) resetBall(-1);
     }
 
-    // Keep AI's ball view in sync
     ball.vx = ballVx;
     ball.vy = ballVy;
   }
 
+  // GAME DESIGNE
   function draw(): void {
     if (!ctx) throw new Error("Pong game error");
 
@@ -281,7 +273,6 @@ export function createPongGame(
     ctx.fillStyle = "black";
     ctx.fillRect(0, 0, width, height);
 
-    // center line
     ctx.strokeStyle = "white";
     ctx.lineWidth = 2;
     ctx.setLineDash([6, 6]);
@@ -291,34 +282,47 @@ export function createPongGame(
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // paddles
     ctx.fillStyle = "white";
     ctx.fillRect(leftPaddle.x_up, leftPaddle.y_up, leftPaddle.width, leftPaddle.height);
     ctx.fillRect(rightPaddle.x_up, rightPaddle.y_up, rightPaddle.width, rightPaddle.height);
 
-    // ball
     if (game.on) {
       ctx.beginPath();
       ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    // scores
     ctx.font = "20px system-ui, sans-serif";
     ctx.textAlign = "center";
     ctx.fillText(String(game.lScore), width * 0.25, 30);
     ctx.fillText(String(game.rScore), width * 0.75, 30);
 
-    // winner text
     if (!game.on && game.winner) {
       ctx.font = "28px system-ui, sans-serif";
-      ctx.fillText(`Winner: ${game.winner.name}`, width / 2, height / 2);
-    }
+
+      let msg = `Winner: ${game.winner.name}`;
+
+      if (aiSide) {
+        const aiIsLeft = aiSide === "left";
+        const aiPlayer = aiIsLeft ? leftPlayer : rightPlayer;
+        const humanPlayer = aiIsLeft ? rightPlayer : leftPlayer;
+
+        if (game.winner.id === aiPlayer.id) {
+          msg = `I'm sorry Dave...`;
+        } else if (game.winner.id === humanPlayer.id) {
+          msg = `You win! (${humanPlayer.name})`;
+        }
+      }
+
+      ctx.fillText(msg, width / 2, height / 2);
+}
+
   }
 
   let lastTime = 0;
   let animationFrameId: number | null = null;
 
+  // MAIN GAME LOOP
   function loop(timestamp: number): void {
     if (lastTime === 0) {
       lastTime = timestamp;
@@ -326,21 +330,18 @@ export function createPongGame(
     const dt = (timestamp - lastTime) / 1000;
     lastTime = timestamp;
 
+    // KEY/GAME SETUP
     if (game.on) {
-      // ----------------- HUMAN INPUT -----------------
       if (aiSide === "left") {
-        // human on right
         updatePlatformFromKeys(rightPaddle, keys.up, keys.down, dt);
       } else if (aiSide === "right") {
-        // human on left
         updatePlatformFromKeys(leftPaddle, keys.w, keys.s, dt);
       } else {
-        // no AI: both human
         updatePlatformFromKeys(leftPaddle, keys.w, keys.s, dt);
         updatePlatformFromKeys(rightPaddle, keys.up, keys.down, dt);
       }
 
-      // ----------------- AI LOGIC (ONCE PER SECOND) -----------------
+      // AI LOGIC (ONCE PER SECOND)
       if (aiSide === "left" || aiSide === "right") {
         aiTimer += dt;
         if (aiTimer >= AI_UPDATE_INTERVAL) {
@@ -350,15 +351,12 @@ export function createPongGame(
           const opponent = aiSide === "right" ? leftPaddle : rightPaddle;
           const isRight = aiSide === "right";
 
-          // Fill current AI view
           aiState.paddle = paddle;
           aiState.ball = ball;
           aiState.dt = AI_UPDATE_INTERVAL;
 
-          // Ask AI module to set a target position (center Y)
           callAiAndSetTarget(aiLevel, aiState, width, height, isRight, opponent);
 
-          // Now compute how long we need to move to reach that target
           const center = paddle.y_up + paddle.height / 2;
           const diff = aiState.target - center;
 
@@ -368,12 +366,10 @@ export function createPongGame(
           } else {
             aiDir = diff > 0 ? 1 : -1;
             const distance = Math.abs(diff);
-            // time = distance / speed
             aiMoveTimeRemaining = distance / paddle.delta_move;
           }
         }
 
-        // ----------------- AI "KEY PRESS" SIMULATION -----------------
         if (aiMoveTimeRemaining > 0) {
           aiMoveTimeRemaining -= dt;
           if (aiMoveTimeRemaining <= 0) {
@@ -430,6 +426,7 @@ export function createPongGame(
 
   animationFrameId = window.requestAnimationFrame(loop);
 
+  //END
   function destroy(): void {
     game.on = false;
     if (animationFrameId !== null) {

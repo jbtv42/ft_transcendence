@@ -1,4 +1,4 @@
-// Predict ball Y when it reaches the paddle's X, with wall bounces.
+// SELECT AI TARGET
 function predictBallYAtPaddle(ball, paddleX, fieldWidth, fieldHeight, isRightPaddle, noiseRange) {
     const vx = ball.vx;
     const vy = ball.vy;
@@ -18,6 +18,7 @@ function predictBallYAtPaddle(ball, paddleX, fieldWidth, fieldHeight, isRightPad
             y = 2 * h - y;
         }
     }
+    // UNPRESISE TARGETING
     if (noiseRange > 0) {
         const noise = (Math.random() - 0.5) * 2 * noiseRange;
         y += noise;
@@ -28,20 +29,17 @@ function predictBallYAtPaddle(ball, paddleX, fieldWidth, fieldHeight, isRightPad
         y = fieldHeight;
     return y;
 }
-// Core AI: predict intercept Y and store it in ai.target
 function setSimpleTarget(ai, fieldWidth, fieldHeight, isRightPaddle, noiseRange) {
     const paddle = ai.paddle;
     const ball = ai.ball;
     const paddleCenter = paddle.y_up + paddle.height / 2;
-    // Choose the x we want to intercept at:
     const paddleX = isRightPaddle
-        ? paddle.x_up // right paddle
-        : paddle.x_up + paddle.width; // left paddle
+        ? paddle.x_up
+        : paddle.x_up + paddle.width;
     const predictedY = predictBallYAtPaddle(ball, paddleX, fieldWidth, fieldHeight, isRightPaddle, noiseRange);
-    // If we can't predict (ball going away / weird), stay where we are
     ai.target = predictedY ?? paddleCenter;
 }
-// --------- AI LEVEL 1–4: all identical for now ---------
+// CHANGE LAST NUMBER FOR PRESISION TARGET
 export function moveai_1(ai, fieldWidth, fieldHeight, isRightPaddle) {
     setSimpleTarget(ai, fieldWidth, fieldHeight, isRightPaddle, 100);
 }
@@ -51,7 +49,6 @@ export function moveai_2(ai, fieldWidth, fieldHeight, isRightPaddle) {
 export function moveai_3(ai, fieldWidth, fieldHeight, isRightPaddle) {
     setSimpleTarget(ai, fieldWidth, fieldHeight, isRightPaddle, 65);
 }
-export function moveai_4(ai, fieldWidth, fieldHeight, isRightPaddle, _opponent // kept for signature compatibility, not used for now
-) {
+export function moveai_4(ai, fieldWidth, fieldHeight, isRightPaddle, _opponent) {
     setSimpleTarget(ai, fieldWidth, fieldHeight, isRightPaddle, 40);
 }
