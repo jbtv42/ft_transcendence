@@ -1,5 +1,0 @@
-/*
-Home page happening
-    - infinit slow game ?
-    - Login ?
-*/
