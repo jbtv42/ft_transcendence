@@ -1,169 +1,111 @@
-//ai lvl 1-4
+import { Platform, Ball, AI } from "./header.js";
 
-//ai lvl 1 { read from 1 / 4}
+// Predict ball Y when it reaches the paddle's X, with wall bounces.
+function predictBallYAtPaddle(
+  ball: Ball,
+  paddleX: number,
+  fieldWidth: number,
+  fieldHeight: number,
+  isRightPaddle: boolean,
+  noiseRange: number
+): number | null {
+  const vx = ball.vx;
+  const vy = ball.vy;
+  if (vx === 0) return null;
 
-//ai lvl 2 { read from 1 / 3 / go to middle }
+  const dx = isRightPaddle ? paddleX - ball.x : ball.x - paddleX;
+  if (dx <= 0) return null;
 
-//ai lvl 3 { read form 1 / 2 / go to middle / try for opp angle}
+  const t = dx / Math.abs(vx);
+  let y = ball.y + vy * t;
+  const h = fieldHeight;
 
-//ai lvl 4 { read hole / go to most likely / try crazy angle }
-import { Player, Platform, Ball, GameState, KeysState, AI, AiMove} from "./header.js";
+  while (y < 0 || y > h) {
+    if (y < 0) {
+      y = -y;
+    } else if (y > h) {
+      y = 2 * h - y;
+    }
+  }
 
-function movePaddleTwoardsCenter(paddle: Platform, targetH: number,
-    dt: number, fieldHeight: number) : void {
-        const center = paddle.y_up + (paddle.height / 2);
-        const diff = targetH - center;
+  if (noiseRange > 0)
+  {
+    const noise = (Math.random() - 0.5) * 2 * noiseRange;
+    y += noise;
+  }
 
-        const goenough = 5;
-        if (Math.abs(diff) < goenough)
-                return ;
-        const direction = diff > 0 ? 1 : -1;        
+  if (y < 0) y = 0;
+  if (y > fieldHeight) y = fieldHeight;
+
+  return y;
 }
+
+// Core AI: predict intercept Y and store it in ai.target
+function setSimpleTarget(
+  ai: AI,
+  fieldWidth: number,
+  fieldHeight: number,
+  isRightPaddle: boolean,
+  noiseRange: number
+): void {
+  const paddle = ai.paddle;
+  const ball = ai.ball;
+
+  const paddleCenter = paddle.y_up + paddle.height / 2;
+
+  // Choose the x we want to intercept at:
+  const paddleX = isRightPaddle
+    ? paddle.x_up                // right paddle
+    : paddle.x_up + paddle.width; // left paddle
+
+  const predictedY = predictBallYAtPaddle(
+    ball,
+    paddleX,
+    fieldWidth,
+    fieldHeight,
+    isRightPaddle,
+    noiseRange
+  );
+
+  // If we can't predict (ball going away / weird), stay where we are
+  ai.target = predictedY ?? paddleCenter;
+}
+
+// --------- AI LEVEL 1–4: all identical for now ---------
 
 export function moveai_1(
   ai: AI,
   fieldWidth: number,
   fieldHeight: number,
-  isRightPaddle: boolean
-): AiMove {
-  const paddle = ai.paddle;
-  const ball = ai.ball;
-
-  const center =ai.paddle.y_up + ai.paddle.height / 2;
-  const diff = ball.y - center;
-
-  const quarterX = fieldWidth / 4;
-  const inMyQuarter = isRightPaddle
-    ? ball.x > fieldWidth - quarterX
-    : ball.x < quarterX;
-
-  const movingTowardsMe =
-    (isRightPaddle && (ball as any).vx > 0) ||
-    (!isRightPaddle && (ball as any).vx < 0);
-
-  if (!inMyQuarter || !movingTowardsMe) {
-    return 0;
+  isRightPaddle: boolean,
+): void {
+  setSimpleTarget(ai, fieldWidth, fieldHeight, isRightPaddle, 100);
 }
-
-  const deadZone = 10;
-  if (Math.abs(diff) < deadZone) return 0;
-
-  return diff > 0 ? +1 : -1;
-}
-
 
 export function moveai_2(
   ai: AI,
   fieldWidth: number,
   fieldHeight: number,
   isRightPaddle: boolean
-): AiMove {
-  const paddle = ai.paddle;
-  const ball = ai.ball;
-
-  const center = ai.paddle.y_up + ai.paddle.height / 2;
-  const diffToBall = ball.y - center;
-
-  const thirdX = fieldWidth / 3;
-  const inMyThird = isRightPaddle
-    ? ball.x > fieldWidth - thirdX
-    : ball.x < thirdX;
-
-  const movingTowardsMe =
-    (isRightPaddle && (ball as any).vx > 0) ||
-    (!isRightPaddle && (ball as any).vx < 0);
-
-  const deadZone = 8;
-
-  if (inMyThird && movingTowardsMe) {
-    if (Math.abs(diffToBall) < deadZone) return 0;
-    return diffToBall > 0 ? +1 : -1;
-  }
-
-  const mid = fieldHeight / 2;
-  const diffToMid = mid - center;
-  if (Math.abs(diffToMid) < deadZone) return 0;
-  return diffToMid > 0 ? +1 : -1;
+): void {
+  setSimpleTarget(ai, fieldWidth, fieldHeight, isRightPaddle, 85);
 }
-
 
 export function moveai_3(
   ai: AI,
   fieldWidth: number,
   fieldHeight: number,
   isRightPaddle: boolean
-): AiMove {
-  const paddle = ai.paddle;
-  const ball = ai.ball;
-
-  const center = ai.paddle.y_up + ai.paddle.height / 2;
-  let targetY = ball.y;
-
-  const halfX = fieldWidth / 2;
-  const inMyHalf = isRightPaddle ? ball.x > halfX : ball.x < halfX;
-
-  const movingTowardsMe =
-    (isRightPaddle && (ball as any).vx > 0) ||
-    (!isRightPaddle && (ball as any).vx < 0);
-
-  const deadZone = 6;
-
-  if (inMyHalf && movingTowardsMe) {
-    const below = ball.y > center;
-    const offset = paddle.height * 0.25;
-    targetY += below ? offset : -offset;
-
-    const diff = targetY - center;
-    if (Math.abs(diff) < deadZone) return 0;
-    return diff > 0 ? +1 : -1;
-  }
-
-  const mid = fieldHeight / 2;
-  const diffToMid = mid - center;
-  if (Math.abs(diffToMid) < deadZone) return 0;
-  return diffToMid > 0 ? +1 : -1;
+): void {
+  setSimpleTarget(ai, fieldWidth, fieldHeight, isRightPaddle, 65);
 }
-
 
 export function moveai_4(
   ai: AI,
   fieldWidth: number,
   fieldHeight: number,
   isRightPaddle: boolean,
-  opponent: Platform
-): AiMove {
-  const paddle = ai.paddle;
-  const ball = ai.ball;
-
-  const mySide = isRightPaddle ? fieldWidth * 0.6 : fieldWidth * 0.4;
-  const onMySide = isRightPaddle ? ball.x > mySide : ball.x < mySide;
-
-  const movingTowardsMe =
-    (isRightPaddle && (ball as any).vx > 0) ||
-    (!isRightPaddle && (ball as any).vx < 0);
-
-  const center = ai.paddle.y_up + ai.paddle.height / 2;
-  let targetY = ball.y;
-  const deadZone = 4;
-
-  if (onMySide && movingTowardsMe) {
-    const oppCenter = opponent.y_up + opponent.height / 2;
-
-    const wantGoHigh = oppCenter > fieldHeight / 2;
-
-    const offset = paddle.height * 0.3;
-    targetY += wantGoHigh ? -offset : +offset;
-
-    const noise = (Math.random() - 0.5) * paddle.height * 0.2;
-    targetY += noise;
-
-    const diff = targetY - center;
-    if (Math.abs(diff) < deadZone) return 0;
-    return diff > 0 ? +1 : -1;
-  }
-
-  const guardY = fieldHeight * 0.4;
-  const diffToGuard = guardY - center;
-  if (Math.abs(diffToGuard) < deadZone) return 0;
-  return diffToGuard > 0 ? +1 : -1;
+  _opponent: Platform  // kept for signature compatibility, not used for now
+): void {
+  setSimpleTarget(ai, fieldWidth, fieldHeight, isRightPaddle, 40);
 }

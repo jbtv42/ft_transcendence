@@ -21,11 +21,12 @@ export type Platform = {
 export type Ball = {
   x: number;
   y: number;
-  vx: number;
-  vy: number;
   radius: number;
   speed: number;
+  vx: number;
+  vy: number;
 };
+
 
 export type GameState = {
   solo: boolean;
@@ -48,18 +49,7 @@ export type AI = {
   paddle: Platform,
   ball: Ball,
   dt: number
+  target: number
 };
 
 export type AiMove = -1 | 1 | 0;
-
-
-class Timer {
-    constructor(public counter = 3) {
-
-        let intervalId = setInterval(() => {
-            this.counter = this.counter - 1;
-            console.log(this.counter)
-            if(this.counter === 0) clearInterval(intervalId)
-        }, 1000)
-    }
-}
