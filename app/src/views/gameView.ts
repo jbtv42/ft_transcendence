@@ -24,6 +24,40 @@ type BuiltGameConfig = {
   baseInfoText: string;
 };
 
+// --------------------------------------------------------
+// Save match result to backend (for Elo etc.)
+// --------------------------------------------------------
+async function saveMatchResult(
+  mode: EffectiveMode,
+  maxScore: number,
+  built: BuiltGameConfig,
+  state: GameState
+): Promise<void> {
+  // Only rate real players (no Elo for AI games)
+  if (mode !== "mp") return;
+
+  try {
+    await fetch("/api/save_match.php", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mode,
+        maxScore,
+        leftPlayer: {
+          username: built.leftPlayer.name,
+          score: state.lScore, // adapt if your GameState uses other names
+        },
+        rightPlayer: {
+          username: built.rightPlayer.name,
+          score: state.rScore,
+        },
+      }),
+    });
+  } catch (err) {
+    console.error("Failed to save match:", err);
+  }
+}
+
 function createCanvas(): HTMLCanvasElement {
   const canvas = document.createElement("canvas");
   canvas.width = 640;
@@ -220,12 +254,17 @@ export function renderGameView(
       maxScore: built.maxScore,
       aiSide: built.aiSide,
       aiLevel: built.aiLevel,
-      onGameEnd: (state) => {
+      onGameEnd: async (state) => {
         if (state.winner) {
           info.textContent = `Winner: ${state.winner.name} (${state.lScore} – ${state.rScore})`;
         } else {
           info.textContent = `Game over`;
         }
+
+        // Save result to backend (Elo, history, etc.)
+        await saveMatchResult(mode, built.maxScore, built, state);
+
+        // Keep external callback behavior
         config?.onGameEnd?.(state);
       },
     });

@@ -9,7 +9,6 @@ services:
       - ./secrets/certs:/etc/nginx/certs:ro
     depends_on:
       - php
-      - mariadb
     networks:
       - appnet
 
@@ -18,25 +17,9 @@ services:
     container_name: transcendence-php
     volumes:
       - ./app:/var/www/html
+      - ./sqlite_data:/var/www/sqlite
     environment:
-      DB_HOST: mariadb
-      DB_PORT: 3306
-      DB_USER: transcendence
-      DB_PASSWORD: secret
-      DB_NAME: transcendence
-    networks:
-      - appnet
-
-  mariadb:
-    image: mariadb:11
-    container_name: transcendence-mariadb
-    environment:
-      MARIADB_DATABASE: transcendence
-      MARIADB_USER: transcendence
-      MARIADB_PASSWORD: secret
-      MARIADB_ROOT_PASSWORD: supersecret
-    volumes:
-      - ./mariadb:/var/lib/mysql
+      DB_PATH: /var/www/sqlite/transcendence.sqlite
     networks:
       - appnet
 
