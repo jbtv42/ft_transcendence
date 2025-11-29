@@ -13,6 +13,90 @@ export type GameViewConfig = {
   aiLevel?: AiLevel;
 };
 
+type EffectiveMode = "mp" | "soloLeft" | "soloRight";
+
+type BuiltGameConfig = {
+  leftPlayer: PlayerInput;
+  rightPlayer: PlayerInput;
+  aiSide: "left" | "right" | undefined;
+  aiLevel: AiLevel;
+  maxScore: number;
+  baseInfoText: string;
+};
+
+function createCanvas(): HTMLCanvasElement {
+  const canvas = document.createElement("canvas");
+  canvas.width = 640;
+  canvas.height = 360;
+  canvas.style.border = "1px solid #fff";
+  canvas.style.display = "block";
+  canvas.style.margin = "1rem auto 0 auto";
+  canvas.style.background = "#000";
+  return canvas;
+}
+
+function buildGameConfig(
+  config: GameViewConfig | undefined,
+  mode: EffectiveMode,
+  aiLevel: AiLevel,
+  leftName: string | null,
+  rightName: string | null
+): BuiltGameConfig {
+  const maxScore = config?.maxScore ?? 5;
+
+  const leftPlayer: PlayerInput =
+    config?.leftPlayer ?? {
+      id: 1,
+      name: "Dave",
+      rank: 0,
+    };
+
+  const rightPlayer: PlayerInput =
+    config?.rightPlayer ?? {
+      id: 2,
+      name: "Dave",
+      rank: 0,
+    };
+
+  if (leftName && leftName.trim()) {
+    leftPlayer.name = leftName.trim();
+  }
+  if (rightName && rightName.trim()) {
+    rightPlayer.name = rightName.trim();
+  }
+
+  let aiSide: "left" | "right" | undefined;
+  if (mode === "soloLeft") aiSide = "left";
+  else if (mode === "soloRight") aiSide = "right";
+  else aiSide = undefined;
+
+  if (aiSide === "left") {
+    leftPlayer.name = "HAL-9000";
+  } else if (aiSide === "right") {
+    rightPlayer.name = "HAL-9000";
+  }
+
+  const modeLabel =
+    aiSide === "left"
+      ? " (AI on left)"
+      : aiSide === "right"
+      ? " (AI on right)"
+      : " (2 players)";
+
+  const aiLabel = aiSide ? ` – AI lvl ${aiLevel}` : "";
+
+  const baseInfoText = `First to ${maxScore}`;
+
+  return {
+    leftPlayer,
+    rightPlayer,
+    aiSide,
+    aiLevel,
+    maxScore,
+    baseInfoText,
+  };
+}
+
 export function renderGameView(
   root: HTMLElement,
   config?: GameViewConfig
@@ -24,51 +108,61 @@ export function renderGameView(
 
   const info = document.createElement("p");
 
-  // ---- Controls: mode + AI level ----
   const controls = document.createElement("div");
-  controls.style.marginBottom = "1rem";
+  controls.style.display = "flex";
+  controls.style.flexWrap = "wrap";
+  controls.style.gap = "0.5rem";
+  controls.style.justifyContent = "center";
+  controls.style.alignItems = "center";
+  controls.style.marginBottom = "0.5rem";
 
-  const modeLabelEl = document.createElement("label");
-  modeLabelEl.textContent = "Mode: ";
-  modeLabelEl.style.marginRight = "0.5rem";
-
+  const modeLabel = document.createElement("label");
+  modeLabel.textContent = "Mode: ";
   const modeSelect = document.createElement("select");
-  modeSelect.innerHTML = `
-    <option value="mp">2 players (MP)</option>
-    <option value="soloRight">Solo (AI on right)</option>
-    <option value="soloLeft">Solo (AI on left)</option>
-  `;
+  const optMp = new Option("Multiplayer", "mp");
+  const optSoloLeft = new Option("AI on left", "soloLeft");
+  const optSoloRight = new Option("AI on right", "soloRight");
+  modeSelect.appendChild(optMp);
+  modeSelect.appendChild(optSoloLeft);
+  modeSelect.appendChild(optSoloRight);
+  const initialMode: EffectiveMode = config?.mode ?? "mp";
+  modeSelect.value = initialMode;
+  modeLabel.appendChild(modeSelect);
 
-  const aiLevelLabelEl = document.createElement("label");
-  aiLevelLabelEl.textContent = "AI level: ";
-  aiLevelLabelEl.style.marginLeft = "1rem";
-  aiLevelLabelEl.style.marginRight = "0.5rem";
+  // AI level select
+  const aiLabel = document.createElement("label");
+  aiLabel.textContent = "AI level: ";
+  const aiSelect = document.createElement("select");
+  for (let lvl = 1 as AiLevel; lvl <= 4; lvl++) {
+    aiSelect.appendChild(new Option(String(lvl), String(lvl)));
+  }
+  aiSelect.value = String(config?.aiLevel ?? 1);
+  aiLabel.appendChild(aiSelect);
 
-  const aiLevelSelect = document.createElement("select");
-  aiLevelSelect.innerHTML = `
-    <option value="1">1 (easy)</option>
-    <option value="2">2</option>
-    <option value="3">3</option>
-    <option value="4">4 (hard)</option>
-  `;
+  // Name inputs (for MP)
+  const leftNameLabel = document.createElement("label");
+  leftNameLabel.textContent = "Left player: ";
+  const leftNameInput = document.createElement("input");
+  leftNameInput.type = "text";
+  leftNameInput.size = 10;
+  leftNameLabel.appendChild(leftNameInput);
 
-  controls.appendChild(modeLabelEl);
-  controls.appendChild(modeSelect);
-  controls.appendChild(aiLevelLabelEl);
-  controls.appendChild(aiLevelSelect);
+  const rightNameLabel = document.createElement("label");
+  rightNameLabel.textContent = "Right player: ";
+  const rightNameInput = document.createElement("input");
+  rightNameInput.type = "text";
+  rightNameInput.size = 10;
+  rightNameLabel.appendChild(rightNameInput);
+
+  controls.appendChild(modeLabel);
+  controls.appendChild(aiLabel);
+  controls.appendChild(leftNameLabel);
+  controls.appendChild(rightNameLabel);
 
   const startButton = document.createElement("button");
   startButton.textContent = "Start game";
-  startButton.style.display = "block";
-  startButton.style.marginBottom = "0.5rem";
 
-  const canvas = document.createElement("canvas");
-  canvas.width = 640;
-  canvas.height = 360;
-  canvas.style.border = "1px solid #fff";
-  canvas.style.display = "block";
-  canvas.style.margin = "1rem auto 0 auto";
-  canvas.style.background = "#000";
+  const canvas = createCanvas();
 
   root.appendChild(title);
   root.appendChild(info);
@@ -76,104 +170,56 @@ export function renderGameView(
   root.appendChild(startButton);
   root.appendChild(canvas);
 
-  // ---- Players / score defaults ----
-  const leftPlayer: PlayerInput =
-    config?.leftPlayer ?? {
-      id: 1,
-      name: "Sam",
-      rank: 0,
-    };
-
-  const rightPlayer: PlayerInput =
-    config?.rightPlayer ?? {
-      id: 2,
-      name: "Bob",
-      rank: 0,
-    };
-
-  const maxScore = config?.maxScore ?? 5;
-
-  // current mode + aiLevel (can be changed by user)
-  let currentMode: "mp" | "soloLeft" | "soloRight" =
-    config?.mode ?? "mp";
-  let currentAiLevel: AiLevel = config?.aiLevel ?? 1;
-
-  // Initialize selects from config (if provided)
-  modeSelect.value = currentMode;
-  aiLevelSelect.value = String(currentAiLevel);
-
-  // Helper: compute aiSide from mode
-  function computeAiSide(
-    mode: "mp" | "soloLeft" | "soloRight"
-  ): "left" | "right" | undefined {
-    if (mode === "soloLeft") return "left";
-    if (mode === "soloRight") return "right";
-    return undefined;
-  }
-
-  // Helper: label texts
-  function modeText(mode: "mp" | "soloLeft" | "soloRight"): string {
-    if (mode === "soloLeft") return " (AI on left)";
-    if (mode === "soloRight") return " (AI on right)";
-    return " (2 players)";
-  }
-
-  function updateAiLevelEnabled() {
-    // disable AI level when in MP mode (no AI)
-    const isMp = currentMode === "mp";
-    aiLevelSelect.disabled = isMp;
-    aiLevelLabelEl.style.opacity = isMp ? "0.5" : "1";
-    aiLevelSelect.style.opacity = isMp ? "0.5" : "1";
-  }
-
-  function updateInfoText() {
-    const aiSide = computeAiSide(currentMode);
-    const aiLabel =
-      aiSide !== undefined ? ` – AI lvl ${currentAiLevel}` : "";
-    info.textContent =
-      `${leftPlayer.name} vs ${rightPlayer.name}` +
-      ` – first to ${maxScore}` +
-      modeText(currentMode) +
-      aiLabel;
-  }
-
-  updateAiLevelEnabled();
-  updateInfoText();
-
-  // ---- React to changes in selects ----
-  modeSelect.addEventListener("change", () => {
-    const value = modeSelect.value as "mp" | "soloLeft" | "soloRight";
-    currentMode = value;
-    updateAiLevelEnabled();
-    updateInfoText();
-  });
-
-  aiLevelSelect.addEventListener("change", () => {
-    currentAiLevel = Number(aiLevelSelect.value) as AiLevel;
-    updateInfoText();
-  });
-
-  // ---- Start / Restart game ----
   let gameInstance: { destroy: () => void } | null = null;
 
+  function updateControlsVisibility() {
+    const isMp = modeSelect.value === "mp";
+    leftNameLabel.style.display = isMp ? "inline-block" : "none";
+    rightNameLabel.style.display = isMp ? "inline-block" : "none";
+    aiLabel.style.display = isMp ? "none" : "inline-block";
+  }
+
+  updateControlsVisibility();
+  modeSelect.addEventListener("change", updateControlsVisibility);
+
+  const initialBuilt = buildGameConfig(
+    config,
+    initialMode,
+    Number(aiSelect.value) as AiLevel,
+    null,
+    null
+  );
+  info.textContent = initialBuilt.baseInfoText;
+
   startButton.addEventListener("click", () => {
-    // Stop current game if running
+    const mode = modeSelect.value as EffectiveMode;
+    const aiLevel = Number(aiSelect.value) as AiLevel;
+
+    const isMp = mode === "mp";
+    const leftName = isMp ? (leftNameInput.value || null) : null;
+    const rightName = isMp ? (rightNameInput.value || null) : null;
+
+    const built = buildGameConfig(
+      config,
+      mode,
+      aiLevel,
+      leftName,
+      rightName
+    );
+
+    info.textContent = built.baseInfoText;
+
     if (gameInstance) {
       gameInstance.destroy();
       gameInstance = null;
     }
 
-    updateInfoText();
-
-    const aiSide = computeAiSide(currentMode);
-    const aiLevel = currentAiLevel;
-
     gameInstance = createPongGame(canvas, {
-      leftPlayer,
-      rightPlayer,
-      maxScore,
-      aiSide,
-      aiLevel,
+      leftPlayer: built.leftPlayer,
+      rightPlayer: built.rightPlayer,
+      maxScore: built.maxScore,
+      aiSide: built.aiSide,
+      aiLevel: built.aiLevel,
       onGameEnd: (state) => {
         if (state.winner) {
           info.textContent = `Winner: ${state.winner.name} (${state.lScore} – ${state.rScore})`;
