@@ -1,5 +1,4 @@
 <?php
-// app/api/leaderboard.php
 header('Content-Type: application/json');
 
 $path = getenv('DB_PATH') ?: '/var/www/sqlite/transcendence.sqlite';
@@ -14,13 +13,13 @@ try {
     exit;
 }
 
-// Get top 10 players by Elo, ignore dummy names if needed
+// PLAYERS TO DISPLAY
 $stmt = $pdo->query("
     SELECT id, username, elo, created_at
     FROM users
     WHERE username != ''
     ORDER BY elo DESC, id ASC
-    LIMIT 10
+    LIMIT 3
 ");
 
 $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);

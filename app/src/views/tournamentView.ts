@@ -1,4 +1,4 @@
-import { renderGameView } from "./gameView.js";
+import { renderTournamentGameView } from "./gameView.js";
 import type { Player, GameState } from "../game/header.js";
 
 type PlayerInput = Omit<Player, "place">;
@@ -71,7 +71,7 @@ function startBracket(root: HTMLElement, players: PlayerInput[]): void {
   let finalLoser: PlayerInput | null = null;
 
   function startMatch(left: PlayerInput, right: PlayerInput, label: string) {
-    renderGameView(root, {
+    renderTournamentGameView(root, {
       leftPlayer: left,
       rightPlayer: right,
       maxScore: 5,

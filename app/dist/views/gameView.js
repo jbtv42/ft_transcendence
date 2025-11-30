@@ -1,9 +1,5 @@
 import { createPongGame } from "../game/pong.js";
-// --------------------------------------------------------
-// Save match result to backend (for Elo etc.)
-// --------------------------------------------------------
-async function saveMatchResult(mode, maxScore, built, state) {
-    // Only rate real players (no Elo for AI games)
+async function saveMatchResult(mode, maxScore, built, state, context) {
     if (mode !== "mp")
         return;
     try {
@@ -13,9 +9,10 @@ async function saveMatchResult(mode, maxScore, built, state) {
             body: JSON.stringify({
                 mode,
                 maxScore,
+                context,
                 leftPlayer: {
                     username: built.leftPlayer.name,
-                    score: state.lScore, // adapt if your GameState uses other names
+                    score: state.lScore,
                 },
                 rightPlayer: {
                     username: built.rightPlayer.name,
@@ -69,12 +66,6 @@ function buildGameConfig(config, mode, aiLevel, leftName, rightName) {
     else if (aiSide === "right") {
         rightPlayer.name = "HAL-9000";
     }
-    const modeLabel = aiSide === "left"
-        ? " (AI on left)"
-        : aiSide === "right"
-            ? " (AI on right)"
-            : " (2 players)";
-    const aiLabel = aiSide ? ` – AI lvl ${aiLevel}` : "";
     const baseInfoText = `First to ${maxScore}`;
     return {
         leftPlayer,
@@ -109,7 +100,6 @@ export function renderGameView(root, config) {
     const initialMode = config?.mode ?? "mp";
     modeSelect.value = initialMode;
     modeLabel.appendChild(modeSelect);
-    // AI level select
     const aiLabel = document.createElement("label");
     aiLabel.textContent = "AI level: ";
     const aiSelect = document.createElement("select");
@@ -118,7 +108,6 @@ export function renderGameView(root, config) {
     }
     aiSelect.value = String(config?.aiLevel ?? 1);
     aiLabel.appendChild(aiSelect);
-    // Name inputs (for MP)
     const leftNameLabel = document.createElement("label");
     leftNameLabel.textContent = "Left player: ";
     const leftNameInput = document.createElement("input");
@@ -179,12 +168,52 @@ export function renderGameView(root, config) {
                 else {
                     info.textContent = `Game over`;
                 }
-                // Save result to backend (Elo, history, etc.)
-                await saveMatchResult(mode, built.maxScore, built, state);
-                // Keep external callback behavior
+                await saveMatchResult(mode, built.maxScore, built, state, "normal");
                 config?.onGameEnd?.(state);
             },
         });
         startButton.textContent = "Restart game";
+    });
+}
+export function renderTournamentGameView(root, config) {
+    root.innerHTML = "";
+    const maxScore = config.maxScore ?? 5;
+    const title = document.createElement("h1");
+    title.textContent = "Pong – Tournament match";
+    const info = document.createElement("p");
+    info.textContent = `First to ${maxScore} – ${config.leftPlayer.name} vs ${config.rightPlayer.name}`;
+    const canvas = createCanvas();
+    root.appendChild(title);
+    root.appendChild(info);
+    root.appendChild(canvas);
+    let gameInstance = null;
+    const built = {
+        leftPlayer: { ...config.leftPlayer },
+        rightPlayer: { ...config.rightPlayer },
+        aiSide: undefined,
+        aiLevel: 1,
+        maxScore,
+        baseInfoText: `First to ${maxScore}`,
+    };
+    gameInstance = createPongGame(canvas, {
+        leftPlayer: built.leftPlayer,
+        rightPlayer: built.rightPlayer,
+        maxScore: built.maxScore,
+        aiSide: built.aiSide,
+        aiLevel: built.aiLevel,
+        onGameEnd: async (state) => {
+            if (state.winner) {
+                info.textContent = `Winner: ${state.winner.name} (${state.lScore} – ${state.rScore})`;
+            }
+            else {
+                info.textContent = "Game over";
+            }
+            await saveMatchResult("mp", built.maxScore, built, state, "tournament");
+            config.onGameEnd?.(state);
+            if (gameInstance) {
+                gameInstance.destroy();
+                gameInstance = null;
+            }
+        },
     });
 }

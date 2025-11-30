@@ -4,6 +4,8 @@ import type { Player, GameState } from "../game/header.js";
 type PlayerInput = Omit<Player, "place">;
 type AiLevel = 1 | 2 | 3 | 4;
 
+type GameContext = "normal" | "tournament";
+
 export type GameViewConfig = {
   leftPlayer?: PlayerInput;
   rightPlayer?: PlayerInput;
@@ -11,6 +13,7 @@ export type GameViewConfig = {
   onGameEnd?: (state: GameState) => void;
   mode?: "mp" | "soloLeft" | "soloRight";
   aiLevel?: AiLevel;
+  context?: GameContext;
 };
 
 type EffectiveMode = "mp" | "soloLeft" | "soloRight";
@@ -24,16 +27,13 @@ type BuiltGameConfig = {
   baseInfoText: string;
 };
 
-// --------------------------------------------------------
-// Save match result to backend (for Elo etc.)
-// --------------------------------------------------------
 async function saveMatchResult(
   mode: EffectiveMode,
   maxScore: number,
   built: BuiltGameConfig,
-  state: GameState
+  state: GameState,
+  context: GameContext
 ): Promise<void> {
-  // Only rate real players (no Elo for AI games)
   if (mode !== "mp") return;
 
   try {
@@ -43,9 +43,10 @@ async function saveMatchResult(
       body: JSON.stringify({
         mode,
         maxScore,
+        context,
         leftPlayer: {
           username: built.leftPlayer.name,
-          score: state.lScore, // adapt if your GameState uses other names
+          score: state.lScore,
         },
         rightPlayer: {
           username: built.rightPlayer.name,
@@ -110,15 +111,6 @@ function buildGameConfig(
     rightPlayer.name = "HAL-9000";
   }
 
-  const modeLabel =
-    aiSide === "left"
-      ? " (AI on left)"
-      : aiSide === "right"
-      ? " (AI on right)"
-      : " (2 players)";
-
-  const aiLabel = aiSide ? ` – AI lvl ${aiLevel}` : "";
-
   const baseInfoText = `First to ${maxScore}`;
 
   return {
@@ -163,7 +155,6 @@ export function renderGameView(
   modeSelect.value = initialMode;
   modeLabel.appendChild(modeSelect);
 
-  // AI level select
   const aiLabel = document.createElement("label");
   aiLabel.textContent = "AI level: ";
   const aiSelect = document.createElement("select");
@@ -173,7 +164,6 @@ export function renderGameView(
   aiSelect.value = String(config?.aiLevel ?? 1);
   aiLabel.appendChild(aiSelect);
 
-  // Name inputs (for MP)
   const leftNameLabel = document.createElement("label");
   leftNameLabel.textContent = "Left player: ";
   const leftNameInput = document.createElement("input");
@@ -261,14 +251,81 @@ export function renderGameView(
           info.textContent = `Game over`;
         }
 
-        // Save result to backend (Elo, history, etc.)
-        await saveMatchResult(mode, built.maxScore, built, state);
+        await saveMatchResult(
+          mode,
+          built.maxScore,
+          built,
+          state,
+          "normal"
+        );
 
-        // Keep external callback behavior
         config?.onGameEnd?.(state);
       },
     });
 
     startButton.textContent = "Restart game";
+  });
+}
+
+type TournamentGameConfig = {
+  leftPlayer: PlayerInput;
+  rightPlayer: PlayerInput;
+  maxScore?: number;
+  onGameEnd?: (state: GameState) => void;
+};
+
+export function renderTournamentGameView(
+  root: HTMLElement,
+  config: TournamentGameConfig
+): void {
+  root.innerHTML = "";
+
+  const maxScore = config.maxScore ?? 5;
+
+  const title = document.createElement("h1");
+  title.textContent = "Pong – Tournament match";
+
+  const info = document.createElement("p");
+  info.textContent = `First to ${maxScore} – ${config.leftPlayer.name} vs ${config.rightPlayer.name}`;
+
+  const canvas = createCanvas();
+
+  root.appendChild(title);
+  root.appendChild(info);
+  root.appendChild(canvas);
+
+  let gameInstance: { destroy: () => void } | null = null;
+
+  const built: BuiltGameConfig = {
+    leftPlayer: { ...config.leftPlayer },
+    rightPlayer: { ...config.rightPlayer },
+    aiSide: undefined,
+    aiLevel: 1 as AiLevel,
+    maxScore,
+    baseInfoText: `First to ${maxScore}`,
+  };
+
+  gameInstance = createPongGame(canvas, {
+    leftPlayer: built.leftPlayer,
+    rightPlayer: built.rightPlayer,
+    maxScore: built.maxScore,
+    aiSide: built.aiSide,
+    aiLevel: built.aiLevel,
+    onGameEnd: async (state) => {
+      if (state.winner) {
+        info.textContent = `Winner: ${state.winner.name} (${state.lScore} – ${state.rScore})`;
+      } else {
+        info.textContent = "Game over";
+      }
+
+      await saveMatchResult("mp", built.maxScore, built, state, "tournament");
+
+      config.onGameEnd?.(state);
+
+      if (gameInstance) {
+        gameInstance.destroy();
+        gameInstance = null;
+      }
+    },
   });
 }
