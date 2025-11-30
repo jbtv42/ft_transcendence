@@ -1,4 +1,5 @@
 import { createPongGame } from "../game/pong.js";
+import { connectGameServer, setOnServerState } from "../network/gameSocket.js";
 async function saveMatchResult(mode, maxScore, built, state, context) {
     if (mode !== "mp")
         return;
@@ -76,6 +77,7 @@ function buildGameConfig(config, mode, aiLevel, leftName, rightName) {
         baseInfoText,
     };
 }
+let gameWs = null;
 export function renderGameView(root, config) {
     root.innerHTML = "";
     const title = document.createElement("h1");
@@ -132,6 +134,18 @@ export function renderGameView(root, config) {
     root.appendChild(controls);
     root.appendChild(startButton);
     root.appendChild(canvas);
+    const ctx = canvas.getContext("2d");
+    setOnServerState((state) => {
+        if (!ctx)
+            return;
+        const x = state.ballX * canvas.width;
+        const y = state.ballY * canvas.height;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.beginPath();
+        ctx.arc(x, y, 10, 0, Math.PI * 2);
+        ctx.fillStyle = "#0f0";
+        ctx.fill();
+    });
     let gameInstance = null;
     function updateControlsVisibility() {
         const isMp = modeSelect.value === "mp";
@@ -150,29 +164,16 @@ export function renderGameView(root, config) {
         const leftName = isMp ? (leftNameInput.value || null) : null;
         const rightName = isMp ? (rightNameInput.value || null) : null;
         const built = buildGameConfig(config, mode, aiLevel, leftName, rightName);
-        info.textContent = built.baseInfoText;
+        info.textContent = built.baseInfoText + " (server ball debug mode)";
+        if (!gameWs || gameWs.readyState === WebSocket.CLOSED) {
+            gameWs = connectGameServer();
+        }
+        // ⛔ TEMP: disable local client-side Pong loop so server ball is visible
         if (gameInstance) {
             gameInstance.destroy();
             gameInstance = null;
         }
-        gameInstance = createPongGame(canvas, {
-            leftPlayer: built.leftPlayer,
-            rightPlayer: built.rightPlayer,
-            maxScore: built.maxScore,
-            aiSide: built.aiSide,
-            aiLevel: built.aiLevel,
-            onGameEnd: async (state) => {
-                if (state.winner) {
-                    info.textContent = `Winner: ${state.winner.name} (${state.lScore} – ${state.rScore})`;
-                }
-                else {
-                    info.textContent = `Game over`;
-                }
-                await saveMatchResult(mode, built.maxScore, built, state, "normal");
-                config?.onGameEnd?.(state);
-            },
-        });
-        startButton.textContent = "Restart game";
+        startButton.textContent = "Restart (server ball only)";
     });
 }
 export function renderTournamentGameView(root, config) {
@@ -195,6 +196,9 @@ export function renderTournamentGameView(root, config) {
         maxScore,
         baseInfoText: `First to ${maxScore}`,
     };
+    if (!gameWs || gameWs.readyState === WebSocket.CLOSED) {
+        gameWs = connectGameServer();
+    }
     gameInstance = createPongGame(canvas, {
         leftPlayer: built.leftPlayer,
         rightPlayer: built.rightPlayer,

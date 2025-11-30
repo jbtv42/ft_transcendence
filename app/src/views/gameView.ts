@@ -1,5 +1,6 @@
 import { createPongGame } from "../game/pong.js";
 import type { Player, GameState } from "../game/header.js";
+import { connectGameServer, setOnServerState } from "../network/gameSocket.js";
 
 type PlayerInput = Omit<Player, "place">;
 type AiLevel = 1 | 2 | 3 | 4;
@@ -123,6 +124,8 @@ function buildGameConfig(
   };
 }
 
+let gameWs: WebSocket | null = null;
+
 export function renderGameView(
   root: HTMLElement,
   config?: GameViewConfig
@@ -194,6 +197,22 @@ export function renderGameView(
   root.appendChild(startButton);
   root.appendChild(canvas);
 
+  const ctx = canvas.getContext("2d");
+
+  setOnServerState((state) => {
+    if (!ctx) return;
+
+    const x = state.ballX * canvas.width;
+    const y = state.ballY * canvas.height;
+
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    ctx.beginPath();
+    ctx.arc(x, y, 10, 0, Math.PI * 2);
+    ctx.fillStyle = "#0f0";
+    ctx.fill();
+  });
+
   let gameInstance: { destroy: () => void } | null = null;
 
   function updateControlsVisibility() {
@@ -231,39 +250,19 @@ export function renderGameView(
       rightName
     );
 
-    info.textContent = built.baseInfoText;
+    info.textContent = built.baseInfoText + " (server ball debug mode)";
 
+    if (!gameWs || gameWs.readyState === WebSocket.CLOSED) {
+      gameWs = connectGameServer();
+    }
+
+    // ⛔ TEMP: disable local client-side Pong loop so server ball is visible
     if (gameInstance) {
       gameInstance.destroy();
       gameInstance = null;
     }
 
-    gameInstance = createPongGame(canvas, {
-      leftPlayer: built.leftPlayer,
-      rightPlayer: built.rightPlayer,
-      maxScore: built.maxScore,
-      aiSide: built.aiSide,
-      aiLevel: built.aiLevel,
-      onGameEnd: async (state) => {
-        if (state.winner) {
-          info.textContent = `Winner: ${state.winner.name} (${state.lScore} – ${state.rScore})`;
-        } else {
-          info.textContent = `Game over`;
-        }
-
-        await saveMatchResult(
-          mode,
-          built.maxScore,
-          built,
-          state,
-          "normal"
-        );
-
-        config?.onGameEnd?.(state);
-      },
-    });
-
-    startButton.textContent = "Restart game";
+    startButton.textContent = "Restart (server ball only)";
   });
 }
 
@@ -304,6 +303,10 @@ export function renderTournamentGameView(
     maxScore,
     baseInfoText: `First to ${maxScore}`,
   };
+
+  if (!gameWs || gameWs.readyState === WebSocket.CLOSED) {
+    gameWs = connectGameServer();
+  }
 
   gameInstance = createPongGame(canvas, {
     leftPlayer: built.leftPlayer,

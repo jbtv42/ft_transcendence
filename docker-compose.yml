@@ -9,6 +9,7 @@ services:
       - ./secrets/certs:/etc/nginx/certs:ro
     depends_on:
       - php
+      - game-server
     networks:
       - appnet
 
@@ -22,6 +23,14 @@ services:
       DB_PATH: /var/www/sqlite/transcendence.sqlite
     networks:
       - appnet
+
+  game-server:
+    build: ./game-server
+    container_name: transcendence-game-server
+    networks:
+      - appnet
+    expose:
+      - "3000"
 
 networks:
   appnet:
