@@ -1,3 +1,4 @@
+// PERM PRINTING
 async function fetchLeaderboard() {
     try {
         const res = await fetch("/api/leaderboard.php");
@@ -11,6 +12,7 @@ async function fetchLeaderboard() {
         return [];
     }
 }
+// HOME WEB PAGE
 export function renderHomeView(root) {
     root.innerHTML = "";
     const title = document.createElement("h1");
@@ -22,7 +24,6 @@ export function renderHomeView(root) {
     const leaderboardList = document.createElement("ol");
     leaderboardList.style.maxWidth = "400px";
     leaderboardList.style.margin = "0 auto 1rem auto";
-    // temporary text while loading
     const loadingItem = document.createElement("li");
     loadingItem.textContent = "Loading leaderboard...";
     leaderboardList.appendChild(loadingItem);
@@ -30,7 +31,6 @@ export function renderHomeView(root) {
     root.appendChild(p);
     root.appendChild(leaderboardTitle);
     root.appendChild(leaderboardList);
-    // Load and render leaderboard asynchronously
     (async () => {
         const players = await fetchLeaderboard();
         leaderboardList.innerHTML = "";

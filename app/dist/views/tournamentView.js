@@ -1,4 +1,4 @@
-import { renderGameView } from "./gameView.js";
+import { renderTournamentGameView } from "./gameView.js";
 export function renderTournamentView(root) {
     root.innerHTML = "";
     const title = document.createElement("h1");
@@ -52,7 +52,7 @@ function startBracket(root, players) {
     const semiWinners = [];
     let finalLoser = null;
     function startMatch(left, right, label) {
-        renderGameView(root, {
+        renderTournamentGameView(root, {
             leftPlayer: left,
             rightPlayer: right,
             maxScore: 5,

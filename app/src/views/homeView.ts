@@ -5,6 +5,7 @@ type LeaderboardPlayer = {
   created_at: string;
 };
 
+// PERM PRINTING
 async function fetchLeaderboard(): Promise<LeaderboardPlayer[]> {
   try {
     const res = await fetch("/api/leaderboard.php");
@@ -17,6 +18,8 @@ async function fetchLeaderboard(): Promise<LeaderboardPlayer[]> {
   }
 }
 
+
+// HOME WEB PAGE
 export function renderHomeView(root: HTMLElement): void {
   root.innerHTML = "";
 
