@@ -1,72 +1,111 @@
-type ServerStateMessage = {
-  type: "state";
-  ballX: number;
-  ballY: number;
+// app/src/network/gameSocket.ts
+// (TS but imports use .js to match the rest of your project setup)
+
+export type ServerState = {
+  ballX: number;        // 0–1
+  ballY: number;        // 0–1
+  leftPaddleY: number;  // 0–1, center
+  rightPaddleY: number; // 0–1, center
+  paddleHeight: number; // 0–1
+  leftScore: number;
+  rightScore: number;
+  ballRadius: number;   // 0–1
 };
 
-type ServerHelloMessage = {
-  type: "hello";
-  msg: string;
-};
+type ServerMessage =
+  | { type: "state"; [key: string]: any }
+  | { type: "hello"; [key: string]: any }
+  | { type: "echo"; [key: string]: any }
+  | { type: string; [key: string]: any };
 
-type ServerEchoMessage = {
-  type: "echo";
-  received: string;
-};
+let socket: WebSocket | null = null;
+let onServerState: ((state: ServerState) => void) | null = null;
 
-type AnyServerMessage =
-  | ServerStateMessage
-  | ServerHelloMessage
-  | ServerEchoMessage
-  | Record<string, unknown>;
-
-let onStateCallback: ((state: ServerStateMessage) => void) | null = null;
-
-export function setOnServerState(
-  cb: (state: ServerStateMessage) => void
-): void {
-  onStateCallback = cb;
+export function setOnServerState(cb: (state: ServerState) => void): void {
+  onServerState = cb;
 }
 
-export function connectGameServer(): WebSocket {
-  const protocol = location.protocol === "https:" ? "wss" : "ws";
-  const url = `${protocol}://${location.host}/ws`;
+export async function connectGameServer(): Promise<void> {
+  if (socket && socket.readyState === WebSocket.OPEN) return;
 
-  const ws = new WebSocket(url);
+  const WS_URL =
+    (location.protocol === "https:" ? "wss://" : "ws://") +
+    location.host +
+    "/ws";
 
-  ws.onopen = () => {
-    console.log("[client] connected to game server:", url);
+  socket = new WebSocket(WS_URL);
 
-    ws.send(JSON.stringify({ type: "hello", from: "client" }));
-  };
+  await new Promise<void>((resolve, reject) => {
+    if (!socket) return reject(new Error("socket null"));
 
-  ws.onmessage = (event) => {
-    let msg: AnyServerMessage;
+    socket.onopen = () => {
+      console.log("[WS] connected to game server");
+      resolve();
+    };
+    socket.onerror = (err) => {
+      console.error("[WS] error", err);
+      reject(new Error("WebSocket error"));
+    };
+  });
+
+  if (!socket) return;
+
+  socket.onmessage = (event) => {
+    let msg: ServerMessage;
     try {
       msg = JSON.parse(event.data);
-    } catch {
-      console.log("[client] raw message from server:", event.data);
+    } catch (e) {
+      console.error("[WS] bad JSON:", event.data, e);
       return;
     }
 
     if (msg.type === "state") {
-      console.log("[client] state from server:", msg);
+      if (onServerState) {
+        const {
+          ballX,
+          ballY,
+          leftPaddleY,
+          rightPaddleY,
+          paddleHeight,
+          leftScore,
+          rightScore,
+          ballRadius,
+        } = msg as any;
 
-      if (onStateCallback) {
-        onStateCallback(msg as ServerStateMessage);
+        onServerState({
+          ballX,
+          ballY,
+          leftPaddleY,
+          rightPaddleY,
+          paddleHeight,
+          leftScore,
+          rightScore,
+          ballRadius,
+        });
       }
     } else {
-      console.log("[client] message from server:", msg);
+      console.log("[WS] message:", msg);
     }
   };
 
-  ws.onerror = (event) => {
-    console.error("[client] WebSocket error:", event);
+  socket.onclose = () => {
+    console.warn("[WS] closed");
   };
+}
 
-  ws.onclose = (event) => {
-    console.log("[client] WebSocket closed:", event.code, event.reason);
-  };
+export type PaddleInput = {
+  side: "left" | "right";
+  up: boolean;
+  down: boolean;
+};
 
-  return ws;
+export function sendInput(input: PaddleInput): void {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+
+  socket.send(
+    JSON.stringify({
+      type: "input",
+      payload: input,
+    })
+  );
 }

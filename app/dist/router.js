@@ -40,7 +40,7 @@ function renderRoute() {
             break;
         case "game":
             renderGameView(viewContainer, {
-                mode: "soloRight", // <- AI on right side
+                mode: "soloRight",
                 aiLevel: 2,
             });
             break;

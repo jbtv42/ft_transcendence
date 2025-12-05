@@ -1,39 +1,68 @@
-let onStateCallback = null;
+// app/src/network/gameSocket.ts
+// (TS but imports use .js to match the rest of your project setup)
+let socket = null;
+let onServerState = null;
 export function setOnServerState(cb) {
-    onStateCallback = cb;
+    onServerState = cb;
 }
-export function connectGameServer() {
-    const protocol = location.protocol === "https:" ? "wss" : "ws";
-    const url = `${protocol}://${location.host}/ws`;
-    const ws = new WebSocket(url);
-    ws.onopen = () => {
-        console.log("[client] connected to game server:", url);
-        ws.send(JSON.stringify({ type: "hello", from: "client" }));
-    };
-    ws.onmessage = (event) => {
+export async function connectGameServer() {
+    if (socket && socket.readyState === WebSocket.OPEN)
+        return;
+    const WS_URL = (location.protocol === "https:" ? "wss://" : "ws://") +
+        location.host +
+        "/ws";
+    socket = new WebSocket(WS_URL);
+    await new Promise((resolve, reject) => {
+        if (!socket)
+            return reject(new Error("socket null"));
+        socket.onopen = () => {
+            console.log("[WS] connected to game server");
+            resolve();
+        };
+        socket.onerror = (err) => {
+            console.error("[WS] error", err);
+            reject(new Error("WebSocket error"));
+        };
+    });
+    if (!socket)
+        return;
+    socket.onmessage = (event) => {
         let msg;
         try {
             msg = JSON.parse(event.data);
         }
-        catch {
-            console.log("[client] raw message from server:", event.data);
+        catch (e) {
+            console.error("[WS] bad JSON:", event.data, e);
             return;
         }
         if (msg.type === "state") {
-            console.log("[client] state from server:", msg);
-            if (onStateCallback) {
-                onStateCallback(msg);
+            if (onServerState) {
+                const { ballX, ballY, leftPaddleY, rightPaddleY, paddleHeight, leftScore, rightScore, ballRadius, } = msg;
+                onServerState({
+                    ballX,
+                    ballY,
+                    leftPaddleY,
+                    rightPaddleY,
+                    paddleHeight,
+                    leftScore,
+                    rightScore,
+                    ballRadius,
+                });
             }
         }
         else {
-            console.log("[client] message from server:", msg);
+            console.log("[WS] message:", msg);
         }
     };
-    ws.onerror = (event) => {
-        console.error("[client] WebSocket error:", event);
+    socket.onclose = () => {
+        console.warn("[WS] closed");
     };
-    ws.onclose = (event) => {
-        console.log("[client] WebSocket closed:", event.code, event.reason);
-    };
-    return ws;
+}
+export function sendInput(input) {
+    if (!socket || socket.readyState !== WebSocket.OPEN)
+        return;
+    socket.send(JSON.stringify({
+        type: "input",
+        payload: input,
+    }));
 }

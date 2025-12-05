@@ -1,3 +1,7 @@
+// app/src/views/homeView.ts
+
+import { renderGameView, type GameViewConfig } from "./gameView.js";
+
 type LeaderboardPlayer = {
   id: number;
   username: string;
@@ -17,7 +21,6 @@ async function fetchLeaderboard(): Promise<LeaderboardPlayer[]> {
     return [];
   }
 }
-
 
 // HOME WEB PAGE
 export function renderHomeView(root: HTMLElement): void {
@@ -45,6 +48,7 @@ export function renderHomeView(root: HTMLElement): void {
   root.appendChild(leaderboardTitle);
   root.appendChild(leaderboardList);
 
+  // Load leaderboard asynchronously
   (async () => {
     const players = await fetchLeaderboard();
     leaderboardList.innerHTML = "";
@@ -62,4 +66,42 @@ export function renderHomeView(root: HTMLElement): void {
       leaderboardList.appendChild(li);
     });
   })();
+
+  // ---- GAME MODE SELECTION ----
+
+  const modeTitle = document.createElement("h2");
+  modeTitle.textContent = "Play Pong";
+
+  const buttons = document.createElement("div");
+  buttons.style.display = "flex";
+  buttons.style.flexDirection = "column";
+  buttons.style.gap = "0.5rem";
+  buttons.style.maxWidth = "300px";
+  buttons.style.margin = "1rem auto";
+
+  const aiBtn = document.createElement("button");
+  aiBtn.textContent = "Play vs AI";
+  aiBtn.onclick = () => {
+    const config: GameViewConfig = {
+      mode: "soloRight", // AI on the right paddle
+      aiLevel: 2,        // difficulty 1–4 (uses your ai.ts)
+      maxScore: 10,
+    };
+    renderGameView(root, config);
+  };
+
+  const onlineBtn = document.createElement("button");
+  onlineBtn.textContent = "Play Online (2 players)";
+  onlineBtn.onclick = () => {
+    const config: GameViewConfig = {
+      mode: "mp", // anything that is not soloLeft/soloRight => online branch
+    };
+    renderGameView(root, config);
+  };
+
+  buttons.appendChild(aiBtn);
+  buttons.appendChild(onlineBtn);
+
+  root.appendChild(modeTitle);
+  root.appendChild(buttons);
 }
