@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>My Pong Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="profile.css" />
+  <script src="profile.js" defer></script>
+</head>
+<body>
+  <div class="card">
+    <div class="profile-header">
+      <div class="avatar" id="avatarBox">
+        <span id="avatarInitials">?</span>
+      </div>
+      <div>
+        <h1 id="title">My Profile</h1>
+        <div class="subtitle" id="subtitle">Loading user...</div>
+      </div>
+    </div>
+
+    <div id="profile" style="display:none;">
+
+      <!-- ACCOUNT INFO -->
+      <div class="section-title">Account information</div>
+
+      <!-- View mode -->
+      <div id="accountView">
+        <div class="row">
+          <span class="label">Email</span>
+          <span class="value-text" id="viewEmail"></span>
+        </div>
+        <div class="row">
+          <span class="label">Username (for login)</span>
+          <span class="value-text" id="viewUsername"></span>
+        </div>
+        <div class="row">
+          <span class="label">Display name (shown in tournaments)</span>
+          <span class="value-text" id="viewDisplayName"></span>
+        </div>
+        <div class="inline-buttons">
+          <button id="editProfileBtn">Edit profile</button>
+        </div>
+      </div>
+
+      <!-- Edit mode -->
+      <div id="accountEdit" style="display:none;">
+        <div class="row">
+          <span class="label">Email</span>
+          <input id="inputEmail" type="email" />
+        </div>
+        <div class="row">
+          <span class="label">Username (for login)</span>
+          <input id="inputUsername" type="text" />
+        </div>
+        <div class="row">
+          <span class="label">Display name (shown in tournaments)</span>
+          <input id="inputDisplayName" type="text" />
+        </div>
+        <div class="inline-buttons">
+          <button id="saveProfileBtn">Save</button>
+          <button id="cancelEditBtn">Cancel</button>
+        </div>
+      </div>
+
+      <!-- AVATAR -->
+      <div class="section-title">Avatar</div>
+
+      <div id="avatarView">
+        <div class="row">
+          <span class="label">Current avatar</span>
+          <span class="value-text">Shown above</span>
+        </div>
+        <div class="inline-buttons">
+          <button id="editAvatarBtn">Change avatar</button>
+        </div>
+      </div>
+
+      <div id="avatarEdit" style="display:none;">
+        <div class="row">
+          <span class="label">New avatar</span>
+          <input id="avatarInput" type="file" accept="image/*" />
+        </div>
+        <div class="inline-buttons">
+          <button id="avatarSaveBtn">Save avatar</button>
+          <button id="cancelAvatarBtn">Cancel</button>
+        </div>
+      </div>
+
+      <!-- PASSWORD -->
+      <div class="section-title">Password</div>
+
+      <div id="passwordView">
+        <div class="row">
+          <span class="label">Password</span>
+          <span class="value-text">********</span>
+        </div>
+        <div class="inline-buttons">
+          <button id="editPasswordBtn">Change password</button>
+        </div>
+      </div>
+
+      <div id="passwordEdit" style="display:none;">
+        <div class="row">
+          <span class="label">Current password</span>
+          <input id="inputCurrentPassword" type="password" autocomplete="current-password" />
+        </div>
+        <div class="row">
+          <span class="label">New password</span>
+          <input id="inputNewPassword" type="password" autocomplete="new-password" />
+        </div>
+        <div class="inline-buttons">
+          <button id="passwordSaveBtn">Save password</button>
+          <button id="cancelPasswordBtn">Cancel</button>
+        </div>
+      </div>
+
+      <!-- STATS -->
+      <div class="section-title">Stats</div>
+      <div class="stats-row">Wins: <span id="fieldWins"></span></div>
+      <div class="stats-row">Losses: <span id="fieldLosses"></span></div>
+
+      <!-- FRIENDS -->
+      <div class="section-title">Friends</div>
+      <div class="row">
+        <span class="label">Add friend (username / email / display name)</span>
+        <input id="friendIdentifier" type="text" placeholder="Enter username or email" />
+        <button id="addFriendBtn">Add friend</button>
+      </div>
+      <div class="row" style="margin-top:0.6rem;">
+        <span class="label">Your friends</span>
+        <div id="friendsList" style="margin-top:0.3rem; font-size:0.85rem;"></div>
+      </div>
+      <div class="row" style="margin-top:0.6rem;">
+        <span class="label">Friend requests</span>
+        <div id="pendingList" style="margin-top:0.3rem; font-size:0.85rem;"></div>
+      </div>
+
+      <!-- GLOBAL CHAT -->
+      <div class="section-title">Global chat</div>
+      <div class="row">
+        <div id="chatBox"></div>
+      </div>
+      <div class="row" style="margin-top:0.4rem;">
+        <input id="chatInput" type="text" placeholder="Type a message..." />
+        <button id="chatSendBtn">Send</button>
+      </div>
+
+      <!-- PONG -->
+      <div class="section-title">Pong</div>
+      <div class="row">
+        <button id="openPongBtn">Open Pong lobby</button>
+      </div>
+
+      <!-- LOGOUT -->
+      <div class="section-title">Session</div>
+      <button id="logoutBtn">Log out</button>
+    </div>
+
+    <div id="message"></div>
+  </div>
+</body>
+</html>

@@ -1,9 +1,12 @@
 // app/src/network/gameSocket.ts
-// (TS but imports use .js to match the rest of your project setup)
 let socket = null;
 let onServerState = null;
+let onSideAssigned = null;
 export function setOnServerState(cb) {
     onServerState = cb;
+}
+export function setOnSideAssigned(cb) {
+    onSideAssigned = cb;
 }
 export async function connectGameServer() {
     if (socket && socket.readyState === WebSocket.OPEN)
@@ -36,27 +39,39 @@ export async function connectGameServer() {
             return;
         }
         if (msg.type === "state") {
-            if (onServerState) {
-                const { ballX, ballY, leftPaddleY, rightPaddleY, paddleHeight, leftScore, rightScore, ballRadius, } = msg;
-                onServerState({
-                    ballX,
-                    ballY,
-                    leftPaddleY,
-                    rightPaddleY,
-                    paddleHeight,
-                    leftScore,
-                    rightScore,
-                    ballRadius,
-                });
-            }
+            if (!onServerState)
+                return;
+            const { ballX, ballY, leftPaddleY, rightPaddleY, paddleHeight, leftScore, rightScore, ballRadius, } = msg;
+            onServerState({
+                ballX,
+                ballY,
+                leftPaddleY,
+                rightPaddleY,
+                paddleHeight,
+                leftScore,
+                rightScore,
+                ballRadius,
+            });
+            return;
         }
-        else {
-            console.log("[WS] message:", msg);
+        if (msg.type === "assignSide") {
+            const side = msg.side;
+            console.log("[WS] assigned side:", side);
+            if (onSideAssigned)
+                onSideAssigned(side);
+            return;
         }
+        console.log("[WS] message:", msg);
     };
     socket.onclose = () => {
         console.warn("[WS] closed");
     };
+}
+// ---- API helpers ----
+export function sendJoin() {
+    if (!socket || socket.readyState !== WebSocket.OPEN)
+        return;
+    socket.send(JSON.stringify({ type: "join" }));
 }
 export function sendInput(input) {
     if (!socket || socket.readyState !== WebSocket.OPEN)

@@ -5,7 +5,10 @@ import {
   setOnServerState,
   sendInput,
   type ServerState,
+  setOnSideAssigned,
+  sendJoin,
 } from "../network/gameSocket.js";
+
 
 import { createPongGame } from "../game/pong.js";
 import type { Player, GameState } from "../game/header.js";
@@ -110,6 +113,8 @@ function renderLocalAiGame(root: HTMLElement, config?: GameViewConfig): void {
 
 // --------- ONLINE SERVER-SIDE GAME ---------
 
+// --------- ONLINE SERVER-SIDE GAME ---------
+
 function renderOnlineGame(root: HTMLElement, _config?: GameViewConfig): void {
   root.innerHTML = "";
 
@@ -118,6 +123,9 @@ function renderOnlineGame(root: HTMLElement, _config?: GameViewConfig): void {
 
   const info = document.createElement("p");
   info.textContent = "Connecting to game server…";
+
+  const sideInfo = document.createElement("p");
+  sideInfo.textContent = "Side: (assigning…)";
 
   const canvas = document.createElement("canvas");
   canvas.width = 640;
@@ -129,6 +137,7 @@ function renderOnlineGame(root: HTMLElement, _config?: GameViewConfig): void {
 
   root.appendChild(title);
   root.appendChild(info);
+  root.appendChild(sideInfo);
   root.appendChild(canvas);
 
   const ctx = canvas.getContext("2d");
@@ -138,9 +147,7 @@ function renderOnlineGame(root: HTMLElement, _config?: GameViewConfig): void {
   }
 
   let lastState: ServerState | null = null;
-
-  // For now: this browser = LEFT player in online mode.
-  const side: "left" | "right" = "left";
+  let mySide: "left" | "right" | "spectator" = "spectator";
 
   const input = {
     up: false,
@@ -148,8 +155,8 @@ function renderOnlineGame(root: HTMLElement, _config?: GameViewConfig): void {
   };
 
   function sendCurrentInput() {
+    if (mySide === "spectator") return; // spectators don't control paddles
     sendInput({
-      side,
       up: input.up,
       down: input.down,
     });
@@ -191,10 +198,17 @@ function renderOnlineGame(root: HTMLElement, _config?: GameViewConfig): void {
     info.textContent = `Score: ${state.leftScore} – ${state.rightScore}`;
   });
 
+  setOnSideAssigned((side: "left" | "right" | "spectator") => {
+    mySide = side;
+    sideInfo.textContent = `Side: ${side}`;
+  });
+
+
   connectGameServer()
     .then(() => {
       info.textContent =
-        "Connected. Use ↑/↓ or W/S to move the left paddle.";
+        "Connected. Waiting for opponent or watching as spectator.";
+      sendJoin();
     })
     .catch((err) => {
       console.error(err);
@@ -224,11 +238,10 @@ function renderOnlineGame(root: HTMLElement, _config?: GameViewConfig): void {
     ctx.setLineDash([5, 5]);
     ctx.beginPath();
     ctx.moveTo(canvas.width / 2, 0);
-    ctx.lineTo(canvas.width / 2, canvas.height);
+    ctx.lineTo(canvas.height / 2, canvas.height);
     ctx.stroke();
     ctx.setLineDash([]);
 
-    // Server sends pixels directly
     const ballX = s.ballX;
     const ballY = s.ballY;
     const ballRadius = s.ballRadius;

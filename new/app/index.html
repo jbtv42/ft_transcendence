@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pong – Login / Register</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      margin: 0;
+      font-family: system-ui, sans-serif;
+      background: #111;
+      color: #eee;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+    }
+    .card {
+      background: #222;
+      padding: 2rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      width: 100%;
+      max-width: 360px;
+    }
+    h1 {
+      margin-top: 0;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+    .tabs {
+      display: flex;
+      margin-bottom: 1rem;
+      border-radius: 999px;
+      overflow: hidden;
+      border: 1px solid #444;
+    }
+    .tab {
+      flex: 1;
+      padding: 0.4rem;
+      text-align: center;
+      cursor: pointer;
+      font-size: 0.9rem;
+      background: #222;
+    }
+    .tab.active {
+      background: #3b82f6;
+      font-weight: 600;
+    }
+    label {
+      display: block;
+      margin-top: 0.8rem;
+      font-size: 0.9rem;
+    }
+    input {
+      width: 100%;
+      padding: 0.4rem 0.5rem;
+      margin-top: 0.2rem;
+      border-radius: 6px;
+      border: 1px solid #444;
+      background: #111;
+      color: #eee;
+      font-size: 0.9rem;
+    }
+    button {
+      margin-top: 1rem;
+      width: 100%;
+      padding: 0.5rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.95rem;
+      background: #16a34a;
+    }
+    button:disabled {
+      opacity: 0.5;
+      cursor: default;
+    }
+    #message {
+      margin-top: 1rem;
+      font-size: 0.85rem;
+      min-height: 1.2em;
+      text-align: center;
+    }
+    .hint {
+      font-size: 0.75rem;
+      opacity: 0.8;
+      margin-top: 0.15rem;
+    }
+    .hidden {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Pong Platform</h1>
+
+    <div class="tabs">
+      <div id="tabRegister" class="tab active">Register</div>
+      <div id="tabLogin" class="tab">Login</div>
+    </div>
+
+    <!-- REGISTER FORM -->
+    <div id="registerForm">
+      <label>
+        Email
+        <input id="regEmail" type="email" autocomplete="email" />
+        <div class="hint">Used to identify your account.</div>
+      </label>
+
+      <label>
+        Username
+        <input id="regUsername" type="text" autocomplete="username" />
+        <div class="hint">Used for login (must be unique).</div>
+      </label>
+
+      <label>
+        Display name
+        <input id="regDisplayName" type="text" />
+        <div class="hint">Name shown in tournaments (must be unique).</div>
+      </label>
+
+      <label>
+        Password
+        <input id="regPassword" type="password" autocomplete="new-password" />
+      </label>
+
+      <button id="registerBtn">Create account</button>
+    </div>
+
+    <!-- LOGIN FORM -->
+    <div id="loginForm" class="hidden">
+      <label>
+        Username or email
+        <input id="loginIdentifier" type="text" autocomplete="username" />
+      </label>
+
+      <label>
+        Password
+        <input id="loginPassword" type="password" autocomplete="current-password" />
+      </label>
+
+      <button id="loginBtn">Log in</button>
+    </div>
+
+    <div id="message"></div>
+  </div>
+
+  <script>
+    const tabRegister   = document.getElementById("tabRegister");
+    const tabLogin      = document.getElementById("tabLogin");
+    const registerForm  = document.getElementById("registerForm");
+    const loginForm     = document.getElementById("loginForm");
+    const messageBox    = document.getElementById("message");
+    const registerBtn   = document.getElementById("registerBtn");
+    const loginBtn      = document.getElementById("loginBtn");
+
+    // Inputs - register
+    const regEmail       = document.getElementById("regEmail");
+    const regUsername    = document.getElementById("regUsername");
+    const regDisplayName = document.getElementById("regDisplayName");
+    const regPassword    = document.getElementById("regPassword");
+
+    // Inputs - login
+    const loginIdentifier = document.getElementById("loginIdentifier");
+    const loginPassword   = document.getElementById("loginPassword");
+
+    function setMessage(text, isError = false) {
+      messageBox.textContent = text;
+      messageBox.style.color = isError ? "#f87171" : "#a7f3d0";
+    }
+
+    function setLoading(loading) {
+      registerBtn.disabled = loading;
+      loginBtn.disabled = loading;
+    }
+
+    // Tab switching
+    function showRegister() {
+      tabRegister.classList.add("active");
+      tabLogin.classList.remove("active");
+      registerForm.classList.remove("hidden");
+      loginForm.classList.add("hidden");
+      setMessage("");
+    }
+
+    function showLogin() {
+      tabLogin.classList.add("active");
+      tabRegister.classList.remove("active");
+      loginForm.classList.remove("hidden");
+      registerForm.classList.add("hidden");
+      setMessage("");
+    }
+
+    tabRegister.addEventListener("click", showRegister);
+    tabLogin.addEventListener("click", showLogin);
+
+    // API calls
+    async function registerUser() {
+      const email       = regEmail.value.trim();
+      const username    = regUsername.value.trim();
+      const displayName = regDisplayName.value.trim();
+      const password    = regPassword.value.trim();
+
+      if (!email || !username || !displayName || !password) {
+        setMessage("Please fill all fields.", true);
+        return;
+      }
+
+      setLoading(true);
+      setMessage("Registering...");
+
+      try {
+        const res = await fetch("/api/register.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            username,
+            display_name: displayName,
+            password,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          setMessage(data.error || "Registration failed.", true);
+        } else {
+          setMessage("Registered successfully! You can now log in.");
+          // Optionally switch automatically to login tab:
+          showLogin();
+          loginIdentifier.value = username;
+        }
+      } catch (err) {
+        console.error(err);
+        setMessage("Network error.", true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function loginUser() {
+      const identifier = loginIdentifier.value.trim();
+      const password   = loginPassword.value.trim();
+
+      if (!identifier || !password) {
+        setMessage("Please fill both fields.", true);
+        return;
+      }
+
+      setLoading(true);
+      setMessage("Logging in...");
+
+      try {
+        const res = await fetch("/api/login.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            identifier,
+            password,
+          }),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          setMessage(data.error || "Login failed.", true);
+        } else {
+          setMessage("Login OK! Redirecting...");
+          console.log("Logged in user:", data.user);
+          setTimeout(() => {
+            window.location.href = "/page/me.html";
+          }, 500);
+        }
+
+      } catch (err) {
+        console.error(err);
+        setMessage("Network error.", true);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    registerBtn.addEventListener("click", registerUser);
+    loginBtn.addEventListener("click", loginUser);
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        if (!registerForm.classList.contains("hidden")) {
+          registerUser();
+        } else {
+          loginUser();
+        }
+      }
+    });
+  </script>
+</body>
+</html>

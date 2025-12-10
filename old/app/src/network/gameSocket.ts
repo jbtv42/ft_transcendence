@@ -1,28 +1,41 @@
 // app/src/network/gameSocket.ts
-// (TS but imports use .js to match the rest of your project setup)
 
 export type ServerState = {
-  ballX: number;        // 0–1
-  ballY: number;        // 0–1
-  leftPaddleY: number;  // 0–1, center
-  rightPaddleY: number; // 0–1, center
-  paddleHeight: number; // 0–1
+  ballX: number;        // pixels
+  ballY: number;        // pixels
+  leftPaddleY: number;  // pixels, top
+  rightPaddleY: number; // pixels, top
+  paddleHeight: number; // pixels
   leftScore: number;
   rightScore: number;
-  ballRadius: number;   // 0–1
+  ballRadius: number;   // pixels
+};
+
+type AssignSideMsg = {
+  type: "assignSide";
+  side: "left" | "right" | "spectator";
 };
 
 type ServerMessage =
-  | { type: "state"; [key: string]: any }
-  | { type: "hello"; [key: string]: any }
-  | { type: "echo"; [key: string]: any }
+  | ({ type: "state" } & any)
+  | ({ type: "hello" } & any)
+  | ({ type: "echo" } & any)
+  | AssignSideMsg
   | { type: string; [key: string]: any };
 
 let socket: WebSocket | null = null;
 let onServerState: ((state: ServerState) => void) | null = null;
+let onSideAssigned: ((side: "left" | "right" | "spectator") => void) | null =
+  null;
 
 export function setOnServerState(cb: (state: ServerState) => void): void {
   onServerState = cb;
+}
+
+export function setOnSideAssigned(
+  cb: (side: "left" | "right" | "spectator") => void
+): void {
+  onSideAssigned = cb;
 }
 
 export async function connectGameServer(): Promise<void> {
@@ -60,32 +73,40 @@ export async function connectGameServer(): Promise<void> {
     }
 
     if (msg.type === "state") {
-      if (onServerState) {
-        const {
-          ballX,
-          ballY,
-          leftPaddleY,
-          rightPaddleY,
-          paddleHeight,
-          leftScore,
-          rightScore,
-          ballRadius,
-        } = msg as any;
+      if (!onServerState) return;
 
-        onServerState({
-          ballX,
-          ballY,
-          leftPaddleY,
-          rightPaddleY,
-          paddleHeight,
-          leftScore,
-          rightScore,
-          ballRadius,
-        });
-      }
-    } else {
-      console.log("[WS] message:", msg);
+      const {
+        ballX,
+        ballY,
+        leftPaddleY,
+        rightPaddleY,
+        paddleHeight,
+        leftScore,
+        rightScore,
+        ballRadius,
+      } = msg as any;
+
+      onServerState({
+        ballX,
+        ballY,
+        leftPaddleY,
+        rightPaddleY,
+        paddleHeight,
+        leftScore,
+        rightScore,
+        ballRadius,
+      });
+      return;
     }
+
+    if (msg.type === "assignSide") {
+      const side = (msg as AssignSideMsg).side;
+      console.log("[WS] assigned side:", side);
+      if (onSideAssigned) onSideAssigned(side);
+      return;
+    }
+
+    console.log("[WS] message:", msg);
   };
 
   socket.onclose = () => {
@@ -93,8 +114,14 @@ export async function connectGameServer(): Promise<void> {
   };
 }
 
+// ---- API helpers ----
+
+export function sendJoin(): void {
+  if (!socket || socket.readyState !== WebSocket.OPEN) return;
+  socket.send(JSON.stringify({ type: "join" }));
+}
+
 export type PaddleInput = {
-  side: "left" | "right";
   up: boolean;
   down: boolean;
 };

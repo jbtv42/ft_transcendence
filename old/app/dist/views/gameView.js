@@ -1,5 +1,5 @@
 // app/src/views/gameView.ts
-import { connectGameServer, setOnServerState, sendInput, } from "../network/gameSocket.js";
+import { connectGameServer, setOnServerState, sendInput, setOnSideAssigned, sendJoin, } from "../network/gameSocket.js";
 import { createPongGame } from "../game/pong.js";
 // --------- MAIN ENTRY POINT ---------
 export function renderGameView(root, config) {
@@ -59,12 +59,15 @@ function renderLocalAiGame(root, config) {
     // No WebSocket in this branch.
 }
 // --------- ONLINE SERVER-SIDE GAME ---------
+// --------- ONLINE SERVER-SIDE GAME ---------
 function renderOnlineGame(root, _config) {
     root.innerHTML = "";
     const title = document.createElement("h1");
     title.textContent = "Pong – online (server-side)";
     const info = document.createElement("p");
     info.textContent = "Connecting to game server…";
+    const sideInfo = document.createElement("p");
+    sideInfo.textContent = "Side: (assigning…)";
     const canvas = document.createElement("canvas");
     canvas.width = 640;
     canvas.height = 360;
@@ -74,6 +77,7 @@ function renderOnlineGame(root, _config) {
     canvas.style.background = "#000";
     root.appendChild(title);
     root.appendChild(info);
+    root.appendChild(sideInfo);
     root.appendChild(canvas);
     const ctx = canvas.getContext("2d");
     if (!ctx) {
@@ -81,15 +85,15 @@ function renderOnlineGame(root, _config) {
         return;
     }
     let lastState = null;
-    // For now: this browser = LEFT player in online mode.
-    const side = "left";
+    let mySide = "spectator";
     const input = {
         up: false,
         down: false,
     };
     function sendCurrentInput() {
+        if (mySide === "spectator")
+            return; // spectators don't control paddles
         sendInput({
-            side,
             up: input.up,
             down: input.down,
         });
@@ -128,10 +132,15 @@ function renderOnlineGame(root, _config) {
         lastState = state;
         info.textContent = `Score: ${state.leftScore} – ${state.rightScore}`;
     });
+    setOnSideAssigned((side) => {
+        mySide = side;
+        sideInfo.textContent = `Side: ${side}`;
+    });
     connectGameServer()
         .then(() => {
         info.textContent =
-            "Connected. Use ↑/↓ or W/S to move the left paddle.";
+            "Connected. Waiting for opponent or watching as spectator.";
+        sendJoin();
     })
         .catch((err) => {
         console.error(err);
@@ -157,10 +166,9 @@ function renderOnlineGame(root, _config) {
         ctx.setLineDash([5, 5]);
         ctx.beginPath();
         ctx.moveTo(canvas.width / 2, 0);
-        ctx.lineTo(canvas.width / 2, canvas.height);
+        ctx.lineTo(canvas.height / 2, canvas.height);
         ctx.stroke();
         ctx.setLineDash([]);
-        // Server sends pixels directly
         const ballX = s.ballX;
         const ballY = s.ballY;
         const ballRadius = s.ballRadius;

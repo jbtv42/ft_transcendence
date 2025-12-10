@@ -14,8 +14,13 @@ function broadcast(obj) {
   }
 }
 
-// --------- INPUT FROM CLIENTS ---------
+// ------------ MATCH / PLAYERS ------------
 
+// global single match for now
+let leftSocket = null;
+let rightSocket = null;
+
+// global input flags (what the physics uses)
 let leftUp = false;
 let leftDown = false;
 let rightUp = false;
@@ -23,6 +28,15 @@ let rightDown = false;
 
 wss.on("connection", (socket) => {
   console.log("[game-server] client connected");
+
+  // side of THIS client: "left" | "right" | "spectator"
+  let mySide = "spectator";
+
+  function assignSide(side) {
+    mySide = side;
+    socket.send(JSON.stringify({ type: "assignSide", side }));
+    console.log("[game-server] assigned side", side);
+  }
 
   socket.on("message", (raw) => {
     const text = raw.toString();
@@ -36,22 +50,50 @@ wss.on("connection", (socket) => {
       return;
     }
 
+    // ---- JOIN PROTOCOL ----
+    if (msg.type === "join") {
+      if (!leftSocket) {
+        leftSocket = socket;
+        assignSide("left");
+      } else if (!rightSocket) {
+        rightSocket = socket;
+        assignSide("right");
+      } else {
+        assignSide("spectator");
+      }
+      return;
+    }
+
+    // ---- INPUT PROTOCOL ----
     if (msg.type === "input" && msg.payload) {
-      const { side, up, down } = msg.payload;
-      if (side === "left") {
+      const { up, down } = msg.payload;
+
+      if (mySide === "left") {
         leftUp = !!up;
         leftDown = !!down;
-      } else if (side === "right") {
+      } else if (mySide === "right") {
         rightUp = !!up;
         rightDown = !!down;
       }
-    } else {
-      socket.send(JSON.stringify({ type: "echo", received: msg }));
+      // spectators' inputs are ignored
+      return;
     }
+
+    // Fallback echo
+    socket.send(JSON.stringify({ type: "echo", received: msg }));
   });
 
   socket.on("close", () => {
     console.log("[game-server] client disconnected");
+
+    if (leftSocket === socket) {
+      leftSocket = null;
+      leftUp = leftDown = false;
+    }
+    if (rightSocket === socket) {
+      rightSocket = null;
+      rightUp = rightDown = false;
+    }
   });
 
   socket.send(
@@ -62,7 +104,7 @@ wss.on("connection", (socket) => {
   );
 });
 
-// --------- GAME CONSTANTS (copied from your pong.ts) ---------
+// ------------ GAME CONSTANTS / PHYSICS (like before) ------------
 
 const WIDTH = 640;
 const HEIGHT = 360;
@@ -80,7 +122,6 @@ const ball = {
   vy: 0,
 };
 
-// paddles use same Platform shape as your TS:
 const leftPaddle = {
   x_up: 20,
   y_up: HEIGHT / 2 - paddleHeight / 2,
@@ -99,17 +140,13 @@ const rightPaddle = {
 
 let leftScore = 0;
 let rightScore = 0;
-const maxScore = 5; // same as game.mScore default
-
+const maxScore = 10;
 let gameOn = true;
 
-// BALL VELOCITY STATE (like ballVx / ballVy in pong.ts)
 let ballVx = ball.speed;
 let ballVy = 0;
 ball.vx = ballVx;
 ball.vy = ballVy;
-
-// --------- BALL SPEED / RALLIES (copied logic) ---------
 
 let rallyCount = 0;
 
@@ -146,10 +183,8 @@ function resetBall(direction) {
   ball.vy = ballVy;
 }
 
-// initial serve (left or right randomly)
+// initial serve
 resetBall(Math.random() < 0.5 ? 1 : -1);
-
-// --------- GAME LOGIC PORTED FROM pong.ts ---------
 
 function updatePlatformFromKeys(platform, upPressed, downPressed, dt) {
   let vy = 0;
@@ -231,9 +266,9 @@ function updateBall(dt) {
   ball.vy = ballVy;
 }
 
-// --------- TICK LOOP + BROADCAST ---------
+// TICK LOOP + BROADCAST
 
-const TICK_MS = 16; // ~60 FPS
+const TICK_MS = 16;
 const DT = TICK_MS / 1000;
 
 setInterval(() => {

@@ -1,0 +1,22 @@
+services:
+  web:
+    build: ./nginx
+    container_name: pong-nginx
+    ports:
+      - "8443:443"
+    volumes:
+      - ./app:/var/www/html:ro
+      - ./data:/data:ro
+    depends_on:
+      - php
+    restart: unless-stopped
+
+  php:
+    build: ./php
+    container_name: pong-php
+    volumes:
+      - ./app:/var/www/html
+      - ./data:/data
+    environment:
+      - DATABASE_URL=/data/users.db
+    restart: unless-stopped

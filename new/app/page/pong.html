@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Pong Lobby</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/page/profile.css">
+  <script defer src="/page/pong.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .box { border: 1px solid #ccc; padding: 16px; max-width: 600px; }
+    button { margin: 4px 0; }
+    #game-code { font-weight: bold; }
+    #pong-canvas { margin-top: 12px; border: 1px solid #ccc; display: none; }
+  </style>
+</head>
+<body>
+  <h1>Pong Lobby</h1>
+
+  <div class="box">
+    <p id="user-info">Checking login...</p>
+
+    <hr>
+
+    <button id="create-game-btn">Create new game</button><br>
+
+    <label>
+      Join code:
+      <input id="join-code-input" type="text" maxlength="10">
+    </label>
+    <button id="join-game-btn">Join game</button>
+
+    <hr>
+
+    <div id="current-game" style="display:none;">
+      <p>Current game code: <span id="game-code"></span></p>
+      <p>Status: <span id="game-status"></span></p>
+
+      <p>You are: <span id="you-role"></span></p>
+      <p>Player 1 ready: <span id="p1-ready"></span></p>
+      <p>Player 2 ready: <span id="p2-ready"></span></p>
+
+      <button id="ready-btn">Ready</button>
+      <button id="unready-btn">Unready</button>
+
+      <p>Score: <span id="score-display"></span></p>
+
+      <canvas id="pong-canvas" width="600" height="400"></canvas>
+      <p style="font-size:0.85rem; opacity:0.7; margin-top:4px;">
+        Controls: Arrow Up / Arrow Down (or W / S)
+      </p>
+    </div>
+
+    <p id="error-msg" style="color:red;"></p>
+  </div>
+</body>
+</html>
