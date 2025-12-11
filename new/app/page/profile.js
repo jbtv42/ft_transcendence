@@ -20,7 +20,7 @@ const inputCurrentPw = document.getElementById("inputCurrentPassword");
 const inputNewPw     = document.getElementById("inputNewPassword");
 
 // Stats
-const fieldWins   = document.getElementById("fieldWins");
+const fieldWins   = document.getElementById("fieldWins");                       
 const fieldLosses = document.getElementById("fieldLosses");
 
 // Sections
@@ -51,8 +51,6 @@ const friendIdentifier = document.getElementById("friendIdentifier");
 const addFriendBtn     = document.getElementById("addFriendBtn");
 const friendsListDiv   = document.getElementById("friendsList");
 const pendingListDiv   = document.getElementById("pendingList");
-
-const openPongBtn = document.getElementById("openPongBtn");
 
 let currentUser = null;
 let originalProfile = null;
@@ -557,11 +555,6 @@ chatInput.addEventListener("keydown", (e) => {
     sendChatMessage();
   }
 });
-if (openPongBtn) {
-  openPongBtn.addEventListener("click", () => {
-    window.location.href = "/page/pong.html";
-  });
-}
 
 loadUser();
 

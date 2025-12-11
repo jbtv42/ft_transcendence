@@ -19,15 +19,21 @@ function get_db(): PDO
             mkdir($dir, 0777, true);
         }
 
-        $db = new PDO('sqlite:' . $dbPath);
-        $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-        $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        try {
+            $db = new PDO('sqlite:' . $dbPath);
+            $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+            $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            error_log("Error connecting to database: " . $e->getMessage());
+            throw $e;
+        }
 
         init_schema($db);
     }
 
     return $db;
 }
+
 
 function init_schema(PDO $db): void
 {
@@ -77,7 +83,22 @@ function init_schema(PDO $db): void
             FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
         )
     ");
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS pong_games (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            code TEXT UNIQUE NOT NULL,
+            player1_id INTEGER NOT NULL,
+            player2_id INTEGER,
+            status TEXT NOT NULL DEFAULT 'waiting',
+            created_at INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            FOREIGN KEY (player1_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (player2_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+    ");
 }
+
 
 function json_response($data, int $status = 200): void
 {

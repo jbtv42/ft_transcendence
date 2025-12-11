@@ -5,8 +5,8 @@ services:
     ports:
       - "8443:443"
     volumes:
-      - ./app:/var/www/html:ro
-      - ./data:/data:ro
+      - ./app:/var/www/html
+      - ./data:/data
     depends_on:
       - php
     restart: unless-stopped
@@ -17,6 +17,5 @@ services:
     volumes:
       - ./app:/var/www/html
       - ./data:/data
-    environment:
-      - DATABASE_URL=/data/users.db
     restart: unless-stopped
+

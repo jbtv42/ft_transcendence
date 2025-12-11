@@ -30,6 +30,9 @@ if (strlen($password) < 6) {
 
 try {
     $db = get_db();
+
+    error_log("Preparing insert query for user registration");
+
     $stmt = $db->prepare("
         INSERT INTO users (
             email, username, display_name, password_hash, avatar_path,
@@ -56,6 +59,7 @@ try {
     json_response(['ok' => true]);
 } catch (PDOException $e) {
     $msg = $e->getMessage();
+    error_log("Database error: " . $msg);
 
     if (str_contains($msg, 'UNIQUE') && str_contains($msg, 'email')) {
         json_response(['error' => 'email already in use'], 409);
@@ -69,3 +73,4 @@ try {
 
     json_response(['error' => 'database error'], 500);
 }
+
