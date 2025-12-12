@@ -1,4 +1,3 @@
-// app/index.ts
 const tabRegister = document.getElementById("tabRegister");
 const tabLogin = document.getElementById("tabLogin");
 const registerForm = document.getElementById("registerForm");
@@ -6,12 +5,10 @@ const loginForm = document.getElementById("loginForm");
 const authMessageBox = document.getElementById("message");
 const registerBtn = document.getElementById("registerBtn");
 const loginBtn = document.getElementById("loginBtn");
-// Inputs - register
 const regEmail = document.getElementById("regEmail");
 const regUsername = document.getElementById("regUsername");
 const regDisplayName = document.getElementById("regDisplayName");
 const regPassword = document.getElementById("regPassword");
-// Inputs - login
 const loginIdentifier = document.getElementById("loginIdentifier");
 const loginPassword = document.getElementById("loginPassword");
 function setAuthMessage(text, isError = false) {
@@ -57,12 +54,8 @@ async function registerUser() {
         const res = await fetch("/api/register.php", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                email,
-                username,
-                display_name: displayName,
-                password,
-            }),
+            credentials: "include",
+            body: JSON.stringify({ email, username, display_name: displayName, password }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -70,7 +63,6 @@ async function registerUser() {
         }
         else {
             setAuthMessage("Registered successfully! You can now log in.");
-            // Auto-switch to login and pre-fill username
             showLogin();
             if (loginIdentifier) {
                 loginIdentifier.value = username;
@@ -100,10 +92,8 @@ async function loginUser() {
         const res = await fetch("/api/login.php", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                identifier,
-                password,
-            }),
+            credentials: "include",
+            body: JSON.stringify({ identifier, password }),
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -125,13 +115,10 @@ async function loginUser() {
         setLoading(false);
     }
 }
-// Tab clicks
 tabRegister === null || tabRegister === void 0 ? void 0 : tabRegister.addEventListener("click", showRegister);
 tabLogin === null || tabLogin === void 0 ? void 0 : tabLogin.addEventListener("click", showLogin);
-// Buttons
 registerBtn === null || registerBtn === void 0 ? void 0 : registerBtn.addEventListener("click", () => { void registerUser(); });
 loginBtn === null || loginBtn === void 0 ? void 0 : loginBtn.addEventListener("click", () => { void loginUser(); });
-// Press Enter to submit current form
 document.addEventListener("keydown", (e) => {
     if (e.key !== "Enter")
         return;

@@ -1,26 +1,20 @@
-// app/profile.ts
-// Basic DOM references
 const subtitle = document.getElementById("subtitle");
 const profileDiv = document.getElementById("profile");
 const messageBox = document.getElementById("message");
 const avatarBox = document.getElementById("avatarBox");
 const avatarInitials = document.getElementById("avatarInitials");
-// Account view fields
 const viewEmail = document.getElementById("viewEmail");
 const viewUsername = document.getElementById("viewUsername");
 const viewDisplayName = document.getElementById("viewDisplayName");
-// Account edit fields
 const inputEmail = document.getElementById("inputEmail");
 const inputUsername = document.getElementById("inputUsername");
 const inputDisplayName = document.getElementById("inputDisplayName");
-// Account / avatar / password sections
 const accountView = document.getElementById("accountView");
 const accountEdit = document.getElementById("accountEdit");
 const avatarView = document.getElementById("avatarView");
 const avatarEdit = document.getElementById("avatarEdit");
 const passwordView = document.getElementById("passwordView");
 const passwordEdit = document.getElementById("passwordEdit");
-// Buttons
 const logoutBtn = document.getElementById("logoutBtn");
 const editProfileBtn = document.getElementById("editProfileBtn");
 const saveProfileBtn = document.getElementById("saveProfileBtn");
@@ -34,10 +28,8 @@ const passwordSaveBtn = document.getElementById("passwordSaveBtn");
 const cancelPasswordBtn = document.getElementById("cancelPasswordBtn");
 const inputCurrentPw = document.getElementById("inputCurrentPassword");
 const inputNewPw = document.getElementById("inputNewPassword");
-// Stats
 const fieldWins = document.getElementById("fieldWins");
 const fieldLosses = document.getElementById("fieldLosses");
-// Friends & chat elements
 const friendIdentifier = document.getElementById("friendIdentifier");
 const addFriendBtn = document.getElementById("addFriendBtn");
 const friendsListDiv = document.getElementById("friendsList");
@@ -48,7 +40,6 @@ const chatSendBtn = document.getElementById("chatSendBtn");
 let currentUser = null;
 let originalProfile = null;
 let lastChatId = 0;
-// ---- Helpers ----
 function setMessage(text, isError = false) {
     if (!messageBox)
         return;
@@ -97,7 +88,6 @@ function fillEditMode(u) {
     if (inputDisplayName)
         inputDisplayName.value = u.display_name;
 }
-// View / edit toggles
 function enterAccountViewMode() {
     if (accountView)
         accountView.style.display = "block";
@@ -172,7 +162,6 @@ function renderStatusDot(status) {
     }
     return span;
 }
-// ---- API logic ----
 async function loadUser() {
     var _a, _b;
     try {
@@ -201,13 +190,11 @@ async function loadUser() {
         enterAccountViewMode();
         enterAvatarViewMode();
         enterPasswordViewMode();
-        // Initial friends + pending + chat
         await Promise.all([
             loadFriends(),
             loadPendingFriends(),
             loadChat(true),
         ]);
-        // Poll every 5s for status + new messages + pending
         setInterval(() => {
             loadFriends();
             loadPendingFriends();
@@ -227,11 +214,9 @@ async function logout() {
         });
     }
     catch (e) {
-        // ignore
     }
     window.location.href = "/";
 }
-// ---- Profile update ----
 async function saveProfile() {
     if (!inputEmail || !inputUsername || !inputDisplayName)
         return;
@@ -284,7 +269,6 @@ function cancelAccountEdit() {
     }
     enterAccountViewMode();
 }
-// ---- Avatar ----
 async function saveAvatar() {
     var _a;
     if (!avatarInput)
@@ -323,7 +307,6 @@ function cancelAvatarEdit() {
     setMessage("");
     enterAvatarViewMode();
 }
-// ---- Password ----
 async function savePassword() {
     if (!inputCurrentPw || !inputNewPw)
         return;
@@ -360,7 +343,6 @@ function cancelPasswordEdit() {
     setMessage("");
     enterPasswordViewMode();
 }
-// ---- Friends ----
 async function loadFriends() {
     if (!friendsListDiv)
         return;
@@ -570,5 +552,4 @@ chatInput === null || chatInput === void 0 ? void 0 : chatInput.addEventListener
         void sendChatMessage();
     }
 });
-// Kick everything off
 void loadUser();

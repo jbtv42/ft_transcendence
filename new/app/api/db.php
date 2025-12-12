@@ -34,7 +34,6 @@ function get_db(): PDO
     return $db;
 }
 
-
 function init_schema(PDO $db): void
 {
     $db->exec('PRAGMA foreign_keys = ON');
@@ -95,10 +94,27 @@ function init_schema(PDO $db): void
             updated_at INTEGER NOT NULL,
             FOREIGN KEY (player1_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY (player2_id) REFERENCES users(id) ON DELETE CASCADE
-        );
+        )
+    ");
+
+    $db->exec("
+        CREATE TABLE IF NOT EXISTS pong_matches (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            game_id INTEGER NOT NULL,
+            code TEXT NOT NULL,
+            player1_id INTEGER NOT NULL,
+            player2_id INTEGER NOT NULL,
+            score_left INTEGER NOT NULL,
+            score_right INTEGER NOT NULL,
+            winner_id INTEGER,
+            created_at INTEGER NOT NULL,
+            FOREIGN KEY (game_id) REFERENCES pong_games(id) ON DELETE CASCADE,
+            FOREIGN KEY (player1_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (player2_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL
+        )
     ");
 }
-
 
 function json_response($data, int $status = 200): void
 {

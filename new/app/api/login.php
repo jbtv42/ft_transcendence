@@ -3,6 +3,9 @@
 require __DIR__ . '/db.php';
 
 session_bootstrap();
+session_start();
+header('Content-Type: application/json');
+
 
 $data = read_json_body();
 

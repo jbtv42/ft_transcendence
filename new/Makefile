@@ -1,11 +1,15 @@
-# Makefile for sst project
 
 COMPOSE := docker compose
-PROJECT := sst
 
-.PHONY: up down build re logs ps clean fclean help
+.PHONY: up down build re logs ps clean fclean help ts
 
 default: help
+
+ts:
+	@echo "Compiling TypeScript in app/..."
+	npx tsc app/index.ts   --target ES2017 --lib DOM,ES2017 --module none --outDir app
+	npx tsc app/profile.ts --target ES2017 --lib DOM,ES2017 --module none --outDir app
+	npx tsc app/game.ts    --target ES2017 --lib DOM,ES2017 --module none --outDir app
 
 up:
 	$(COMPOSE) up -d
@@ -13,7 +17,7 @@ up:
 down:
 	$(COMPOSE) down
 
-build:
+build: ts
 	$(COMPOSE) build
 
 re: down build up
@@ -25,18 +29,17 @@ ps:
 	$(COMPOSE) ps
 
 clean: down
-	# Remove dangling images (not just for this project, but usually safe)
 	docker image prune -f
 
 fclean: clean
-	# Remove any anonymous volumes created by this compose file
 	$(COMPOSE) down -v
 
 help:
 	@echo "Available targets:"
+	@echo "  ts      - Compile TypeScript entrypoints to JS"
 	@echo "  up      - Start containers in detached mode"
 	@echo "  down    - Stop and remove containers"
-	@echo "  build   - Build images"
+	@echo "  build   - Compile TS + build images"
 	@echo "  re      - Rebuild and restart (down + build + up)"
 	@echo "  logs    - Follow logs"
 	@echo "  ps      - Show container status"

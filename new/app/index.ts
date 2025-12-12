@@ -63,12 +63,8 @@ async function registerUser(): Promise<void> {
     const res = await fetch("/api/register.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email,
-        username,
-        display_name: displayName,
-        password,
-      }),
+      credentials: "include",
+      body: JSON.stringify({ email, username, display_name: displayName, password }),
     });
 
     const data: any = await res.json().catch(() => ({}));
@@ -108,10 +104,8 @@ async function loginUser(): Promise<void> {
     const res = await fetch("/api/login.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        identifier,
-        password,
-      }),
+      credentials: "include",
+      body: JSON.stringify({ identifier, password }),
     });
 
     const data: any = await res.json().catch(() => ({}));

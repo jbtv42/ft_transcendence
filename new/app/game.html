@@ -1,0 +1,27 @@
+<!-- app/game.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Pong – Live Match</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <!-- Optional styling -->
+  <link rel="stylesheet" href="game.css" />
+</head>
+<body>
+
+  <!-- The "screen" -->
+  <canvas id="gameCanvas" width="800" height="600"></canvas>
+
+  <!-- UI / status -->
+  <div id="hud">
+    <span id="status">Connecting…</span>
+    <span id="score"></span>
+  </div>
+
+  <!-- Load the real logic -->
+  <script src="game.js" defer></script>
+
+</body>
+</html>

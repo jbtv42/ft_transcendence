@@ -614,3 +614,4 @@ chatInput?.addEventListener("keydown", (e: KeyboardEvent) => {
 });
 
 void loadUser();
+
