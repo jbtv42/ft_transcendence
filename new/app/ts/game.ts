@@ -60,23 +60,35 @@ function setScore(left: number, right: number): void {
   if (scoreEl) scoreEl.textContent = `${left} : ${right}`;
 }
 
-async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    credentials: "include",
-    ...init,
-    headers: {
-      ...(init?.headers ?? {}),
-      "Content-Type": "application/json",
-    },
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    const msg =
-      data && (data.error || data.message)
-        ? String(data.error || data.message)
-        : `HTTP ${res.status}`;
-    throw new Error(msg);
+// ✅ safer apiJson (cookies always, better errors, only sets JSON header if needed)
+async function apiJson<T>(url: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers || {});
+  headers.set("Accept", "application/json");
+
+  // Only set JSON content-type if we're actually sending a body
+  if (init.body !== undefined && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
   }
+
+  const res = await fetch(url, {
+    ...init,
+    credentials: "include",
+    headers,
+  });
+
+  const text = await res.text();
+  let data: any = {};
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = { message: text };
+  }
+
+  if (!res.ok) {
+    const msg = data?.error || data?.message || `HTTP ${res.status}`;
+    throw new Error(String(msg));
+  }
+
   return data as T;
 }
 
@@ -90,8 +102,8 @@ function drawDebugOverlay(): void {
   lines.push(`role=${myRole ?? "?"}`);
   lines.push(`ws=${ws ? WebSocketState(ws.readyState) : "null"}`);
   lines.push(`msgs=${wsMsgCount} stateMsgs=${wsStateCount}`);
-  lines.push(`lastMsg=${lastWsMsgAt ? (nowMs() - lastWsMsgAt) + "ms ago" : "-"}`);
-  lines.push(`lastState=${lastStateAt ? (nowMs() - lastStateAt) + "ms ago" : "-"}`);
+  lines.push(`lastMsg=${lastWsMsgAt ? nowMs() - lastWsMsgAt + "ms ago" : "-"}`);
+  lines.push(`lastState=${lastStateAt ? nowMs() - lastStateAt + "ms ago" : "-"}`);
   if (lastState) {
     lines.push(`status=${lastState.status} code=${lastState.code ?? "?"}`);
     lines.push(`score=${lastState.score.left}:${lastState.score.right}`);
@@ -141,7 +153,8 @@ async function boot(): Promise<void> {
   let mm: MMResp;
 
   try {
-    mm = await apiJson<MMResp>("/api/game/matchmake", { method: "POST" });
+    // ✅ send an empty JSON body to avoid 400s on strict servers
+    mm = await apiJson<MMResp>("/api/game/matchmake", { method: "POST", body: "{}" });
   } catch (e) {
     setStatus(`Matchmaking failed: ${(e as Error).message}`);
     dlog("matchmake FAILED:", e);
