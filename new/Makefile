@@ -7,9 +7,9 @@ default: help
 
 ts:
 	@echo "Compiling TypeScript in app/..."
-	npx tsc app/index.ts   --target ES2017 --lib DOM,ES2017 --module none --outDir app
-	npx tsc app/profile.ts --target ES2017 --lib DOM,ES2017 --module none --outDir app
-	npx tsc app/game.ts    --target ES2017 --lib DOM,ES2017 --module none --outDir app
+	npx tsc app/ts/index.ts   --target ES2017 --lib DOM,ES2017 --module none --outDir app/html
+	npx tsc app/ts/profile.ts --target ES2017 --lib DOM,ES2017 --module none --outDir app/html
+	npx tsc app/ts/game.ts    --target ES2017 --lib DOM,ES2017 --module none --outDir app/html
 
 up:
 	$(COMPOSE) up -d

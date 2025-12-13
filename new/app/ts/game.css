@@ -1,0 +1,34 @@
+body {
+  margin: 0;
+  padding: 0;
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 16px;
+}
+
+#gameCanvas {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  max-width: 100%;
+  height: auto;
+}
+
+#hud {
+  width: 800px;
+  max-width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+}
+
+#status {
+  opacity: 0.85;
+}
+
+#score {
+  font-weight: 700;
+}

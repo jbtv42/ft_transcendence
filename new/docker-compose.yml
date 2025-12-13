@@ -5,35 +5,24 @@ services:
     ports:
       - "8443:443"
     volumes:
-      - ./app:/var/www/html
+      - ./app/html:/var/www/html
       - ./data:/data
     depends_on:
-      - php
       - game-server
     networks:
       - pong-network
     restart: unless-stopped
 
-  php:
-    build: ./php
-    container_name: pong-php
-    volumes:
-      - ./app:/var/www/html
-      - ./data:/data
-    environment:
-      - DATABASE_URL=/data/users.db
-      - GAME_SERVER_SECRET=devsecret
-    networks:
-      - pong-network
-    restart: unless-stopped
-
   game-server:
-    build : ./game-server
+    build: ./game-server
     container_name: pong-game-server
     environment:
-      - GAME_PORT=3000
-      - PHP_API_BASE=http://web
+      - API_PORT=3000
+      - DATABASE_URL=/data/users.db
+      - COOKIE_SECRET=devsecret_change_me
       - GAME_SERVER_SECRET=devsecret
+    volumes:
+      - ./data:/data
     networks:
       - pong-network
     restart: unless-stopped
