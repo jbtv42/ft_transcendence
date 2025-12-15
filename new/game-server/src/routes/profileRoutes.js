@@ -40,6 +40,16 @@ export function registerProfileRoutes(app, { authService, profileService }) {
   });
 
   app.get('/api/user/profile', async (req, reply) => {
+    const sid = req.cookies?.sid;
+    if (!sid) {
+      return reply.code(401).send({ ok: false, error: 'Not authenticated' });
+    }
+
+    const me = await authService.getMe({ sid });
+    if (!me) {
+      return reply.code(401).send({ ok: false, error: 'Not authenticated' });
+    }
+
     const userId = req.query.id;
     if (!userId) {
       return reply.code(400).send({ ok: false, error: 'User ID is required' });
@@ -53,10 +63,11 @@ export function registerProfileRoutes(app, { authService, profileService }) {
 
       return reply.send({ ok: true, user });
     } catch (error) {
-      console.error('Error fetching user profile:', error); // Log the error
+      console.error('Error fetching user profile:', error);
       return reply.code(500).send({ ok: false, error: 'Internal Server Error', details: error.message });
     }
   });
 }
+
 
 

@@ -332,23 +332,101 @@ async function loadFriends() {
         return;
     try {
         const data = await apiJson("/api/friends/friends_list", { method: "GET" });
+        const friends = Array.isArray(data === null || data === void 0 ? void 0 : data.friends) ? data.friends : [];
         friendsListDiv.innerHTML = "";
-        const friends = Array.isArray(data.friends) ? data.friends : [];
         if (friends.length === 0) {
             friendsListDiv.textContent = "No friends yet.";
             return;
         }
+        let invites = [];
+        try {
+            const invRes = await fetch("/api/game/invites", {
+                method: "GET",
+                credentials: "include",
+            });
+            const invPayload = await invRes.json().catch(() => ({}));
+            if (invRes.ok && (invPayload === null || invPayload === void 0 ? void 0 : invPayload.ok) && Array.isArray(invPayload === null || invPayload === void 0 ? void 0 : invPayload.invites)) {
+                invites = invPayload.invites;
+            }
+        }
+        catch (_a) {
+            invites = [];
+        }
+        function findInviteFromFriend(friendId) {
+            const list = invites.filter((inv) => Number(inv === null || inv === void 0 ? void 0 : inv.from_id) === Number(friendId));
+            if (list.length === 0)
+                return null;
+            list.sort((a, b) => Number((b === null || b === void 0 ? void 0 : b.created_at) || 0) - Number((a === null || a === void 0 ? void 0 : a.created_at) || 0));
+            return list[0];
+        }
         friends.forEach((f) => {
             const row = document.createElement("div");
+            row.className = "friend-row";
             const dot = renderStatusDot(!!f.online);
             const nameBtn = document.createElement("button");
             nameBtn.textContent = f.display_name || f.username || `User ${f.id}`;
             nameBtn.className = "friend-name-btn";
             nameBtn.addEventListener("click", () => {
-                window.location.href = `viewProfile.html?userId=${f.id}`;
+                window.location.href = `viewProfile.html?userId=${encodeURIComponent(String(f.id))}`;
+            });
+            const inviteBtn = document.createElement("button");
+            inviteBtn.textContent = "Invite";
+            inviteBtn.className = "friend-invite-btn";
+            const joinBtn = document.createElement("button");
+            joinBtn.textContent = "Join";
+            joinBtn.className = "friend-join-btn";
+            joinBtn.disabled = true;
+            joinBtn.title = "Join becomes available when you have a pending invite from this friend.";
+            const inv = findInviteFromFriend(Number(f.id));
+            if (inv === null || inv === void 0 ? void 0 : inv.code) {
+                joinBtn.disabled = false;
+                joinBtn.dataset.code = String(inv.code);
+                joinBtn.title = `Join invite (code ${inv.code})`;
+                inviteBtn.disabled = true;
+            }
+            inviteBtn.addEventListener("click", async (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const friendIdentifier = String(f.username || f.display_name || "").trim();
+                if (!friendIdentifier) {
+                    setMessage("Friend has no username/display name.", true);
+                    return;
+                }
+                setMessage(`Inviting ${friendIdentifier}...`);
+                try {
+                    const res = await fetch("/api/game/matchmake", {
+                        method: "POST",
+                        credentials: "include",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ friendIdentifier }),
+                    });
+                    const payload = await res.json().catch(() => ({}));
+                    if (!res.ok || !(payload === null || payload === void 0 ? void 0 : payload.ok) || !(payload === null || payload === void 0 ? void 0 : payload.code)) {
+                        setMessage((payload === null || payload === void 0 ? void 0 : payload.error) || "Invite failed.", true);
+                        return;
+                    }
+                    window.location.href = `game.html?code=${encodeURIComponent(payload.code)}`;
+                }
+                catch (err) {
+                    console.error(err);
+                    setMessage("Network error while inviting.", true);
+                }
+            });
+            joinBtn.addEventListener("click", (e) => {
+                var _a;
+                e.preventDefault();
+                e.stopPropagation();
+                const code = String(((_a = joinBtn.dataset) === null || _a === void 0 ? void 0 : _a.code) || "").trim();
+                if (!code) {
+                    setMessage("No invite code available for this friend.", true);
+                    return;
+                }
+                window.location.href = `game.html?code=${encodeURIComponent(code)}`;
             });
             row.appendChild(dot);
             row.appendChild(nameBtn);
+            row.appendChild(inviteBtn);
+            row.appendChild(joinBtn);
             friendsListDiv.appendChild(row);
         });
     }

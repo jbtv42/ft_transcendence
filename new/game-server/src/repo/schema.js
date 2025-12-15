@@ -1,10 +1,16 @@
 export function ensureSchema(db) {
   db.serialize(() => {
-    db.run("PRAGMA foreign_keys = ON;");
-    db.run("PRAGMA journal_mode = WAL;");
-    
-    db.run(`CREATE INDEX IF NOT EXISTS idx_chat_room_id ON chat_messages(room, id)`);
+    db.run("PRAGMA foreign_keys = ON;", (err) => {
+      if (err) console.error("Error enabling foreign keys:", err);
+    });
 
+    db.run("PRAGMA journal_mode = WAL;", (err) => {
+      if (err) console.error("Error setting journal mode:", err);
+    });
+
+    db.run(`CREATE INDEX IF NOT EXISTS idx_chat_room_id ON chat_messages(room, id);`, (err) => {
+      if (err) console.error("Error creating index:", err);
+    });
 
     db.run(`
       CREATE TABLE IF NOT EXISTS users (
@@ -20,7 +26,9 @@ export function ensureSchema(db) {
         updated_at TEXT NOT NULL,
         last_active TEXT
       )
-    `);
+    `, (err) => {
+      if (err) console.error("Error creating users table:", err);
+    });
 
     db.run(`
       CREATE TABLE IF NOT EXISTS sessions (
@@ -29,7 +37,9 @@ export function ensureSchema(db) {
         created_at TEXT NOT NULL,
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
       )
-    `);
+    `, (err) => {
+      if (err) console.error("Error creating sessions table:", err);
+    });
 
     db.run(`
       CREATE TABLE IF NOT EXISTS chat_messages (
@@ -40,7 +50,9 @@ export function ensureSchema(db) {
         created_at TEXT NOT NULL,
         FOREIGN KEY (sender_id) REFERENCES users(id) ON DELETE CASCADE
       )
-    `);
+    `, (err) => {
+      if (err) console.error("Error creating chat_messages table:", err);
+    });
 
     db.run(`
       CREATE TABLE IF NOT EXISTS pong_games (
@@ -54,7 +66,9 @@ export function ensureSchema(db) {
         FOREIGN KEY (player1_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (player2_id) REFERENCES users(id) ON DELETE CASCADE
       )
-    `);
+    `, (err) => {
+      if (err) console.error("Error creating pong_games table:", err);
+    });
 
     db.run(`
       CREATE TABLE IF NOT EXISTS friends (
@@ -67,9 +81,9 @@ export function ensureSchema(db) {
         FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY(friend_id) REFERENCES users(id) ON DELETE CASCADE
       )
-    `);
-
-    
+    `, (err) => {
+      if (err) console.error("Error creating friends table:", err);
+    });
 
     db.run(`
       CREATE TABLE IF NOT EXISTS pong_matches (
@@ -87,6 +101,18 @@ export function ensureSchema(db) {
         FOREIGN KEY (player2_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (winner_id) REFERENCES users(id) ON DELETE SET NULL
       )
-    `);
+    `, (err) => {
+      if (err) console.error("Error creating pong_matches table:", err);
+    });
+
+  });
+
+  db.all("SELECT name FROM sqlite_master WHERE type='table';", (err, tables) => {
+    if (err) {
+      console.error("Error listing tables:", err);
+    } else {
+      console.log("Tables:", tables);
+    }
   });
 }
+

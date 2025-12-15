@@ -121,7 +121,7 @@
       <div class="inline-buttons">
         <a href="game.html"><button id="playGameBtn">Play live Pong</button></a>
       </div>
-
+      
       <!-- STATS -->
       <div class="section-title">Stats</div>
       <div class="stats-row">Wins: <span id="fieldWins"></span></div>
@@ -134,14 +134,19 @@
         <input id="friendIdentifier" type="text" placeholder="Enter username or email" />
         <button id="addFriendBtn">Add friend</button>
       </div>
+
       <div class="row" style="margin-top:0.6rem;">
         <span class="label">Your friends</span>
-        <div id="friendsList" style="margin-top:0.3rem; font-size:0.85rem;"></div>
+        <div id="friendsList" style="margin-top:0.3rem; font-size:0.85rem;">
+          <!-- Friends list will populate here dynamically -->
+        </div>
       </div>
+
       <div class="row" style="margin-top:0.6rem;">
         <span class="label">Friend requests</span>
         <div id="pendingList" style="margin-top:0.3rem; font-size:0.85rem;"></div>
       </div>
+
 
       <!-- GLOBAL CHAT -->
       <div class="section-title">Global chat</div>

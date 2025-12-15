@@ -22,6 +22,14 @@ function userPublic(u) {
 export function createGameService(dbCtx) {
   const { dbGet, dbRun } = dbCtx;
 
+  // Prefer your dbAll helper from initDb(); otherwise fallback to raw sqlite db.all
+  const dbAll =
+    dbCtx.dbAll ??
+    ((sql, params = []) =>
+      new Promise((resolve, reject) => {
+        dbCtx.db.all(sql, params, (err, rows) => (err ? reject(err) : resolve(rows)));
+      }));
+
   /** @type {Map<string, Match>} */
   const matchesByCode = new Map();
 
@@ -38,27 +46,154 @@ export function createGameService(dbCtx) {
     }
   }
 
-  async function matchmakeForUser(user) {
+  async function abandonGameByCode(code) {
+    const now = Math.floor(Date.now() / 1000);
+    await dbRun(
+      `UPDATE pong_games
+         SET status = 'abandoned', updated_at = ?
+       WHERE code = ?
+         AND status IN ('waiting', 'active')`,
+      [now, code]
+    );
+  }
+
+  // If DB says "active" but we have no in-memory match (restart / refresh),
+  // we must not block the user forever.
+  async function abandonStaleActiveGamesForUser(userId) {
     const now = Math.floor(Date.now() / 1000);
 
+    const rows = await dbAll(
+      `SELECT id, code
+         FROM pong_games
+        WHERE status = 'active'
+          AND (player1_id = ? OR player2_id = ?)`,
+      [userId, userId]
+    );
+
+    for (const r of rows || []) {
+      const code = String(r.code || "");
+      if (!code) continue;
+
+      // If no live WS match exists, mark it abandoned
+      if (!matchesByCode.has(code)) {
+        await dbRun(
+          `UPDATE pong_games
+              SET status = 'abandoned', updated_at = ?
+            WHERE id = ? AND status = 'active'`,
+          [now, r.id]
+        );
+      }
+    }
+  }
+
+  // delete DB waiting games older than 20s ONLY if there are 0 connected players
+  let _lastWaitingCleanupSec = 0;
+  async function cleanupWaitingGames() {
+    const nowSec = Math.floor(Date.now() / 1000);
+
+    // run at most once per second (tickAll runs often)
+    if (_lastWaitingCleanupSec === nowSec) return;
+    _lastWaitingCleanupSec = nowSec;
+
+    const cutoff = nowSec - 20;
+
+    const oldWaiting = await dbAll(
+      `SELECT id, code, created_at
+         FROM pong_games
+        WHERE status = 'waiting'
+          AND created_at <= ?
+        ORDER BY created_at ASC`,
+      [cutoff]
+    );
+
+    if (!oldWaiting || oldWaiting.length === 0) return;
+
+    for (const g of oldWaiting) {
+      const code = String(g.code || "");
+      if (!code) continue;
+
+      const mem = matchesByCode.get(code);
+      const connectedPlayers = mem ? mem.players.length : 0;
+
+      // only delete if literally nobody is connected
+      if (connectedPlayers !== 0) continue;
+
+      try {
+        const res = await dbRun(
+          `DELETE FROM pong_games
+            WHERE id = ?
+              AND status = 'waiting'`,
+          [g.id]
+        );
+
+        if (res?.changes > 0) {
+          matchesByCode.delete(code);
+        }
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  async function matchmakeForUser(user, friendIdentifier = null) {
+    const now = Math.floor(Date.now() / 1000);
+
+    // Clean stale "active" games for this user (restart / refresh safety)
+    await abandonStaleActiveGamesForUser(user.id);
+
+    if (friendIdentifier) {
+      const friend = await dbGet(
+        `SELECT id, username, display_name
+           FROM users
+          WHERE username = ? OR display_name = ?
+          LIMIT 1`,
+        [friendIdentifier, friendIdentifier]
+      );
+
+      if (!friend) {
+        throw new Error("Friend not found");
+      }
+
+      // Also clean stale "active" for friend, so they don't get blocked forever
+      await abandonStaleActiveGamesForUser(friend.id);
+
+      // Block only if THIS user truly has an active game
+      const existingGame = await dbGet(
+        `SELECT id, code, status
+           FROM pong_games
+          WHERE status = 'active'
+            AND (player1_id = ? OR player2_id = ?)
+          LIMIT 1`,
+        [user.id, user.id]
+      );
+
+      if (existingGame) {
+        throw new Error("You are already in a game");
+      }
+
+      return await inviteToGame(user.id, friend.id);
+    }
+
+    // RANDOM MATCHMAKING
     const waiting = await dbGet(
       `SELECT id, code, player1_id
-       FROM pong_games
-       WHERE status = 'waiting'
-         AND player2_id IS NULL
-         AND player1_id != ?
-       ORDER BY created_at ASC
-       LIMIT 1`,
+         FROM pong_games
+        WHERE status = 'waiting'
+          AND player2_id IS NULL
+          AND player1_id != ?
+        ORDER BY created_at ASC
+        LIMIT 1`,
       [user.id]
     );
 
     if (waiting) {
       const upd = await dbRun(
         `UPDATE pong_games
-         SET player2_id = ?, status = 'active', updated_at = ?
-         WHERE id = ? AND player2_id IS NULL`,
+            SET player2_id = ?, status = 'active', updated_at = ?
+          WHERE id = ? AND player2_id IS NULL`,
         [user.id, now, waiting.id]
       );
+
       if (upd.changes > 0) {
         return { code: waiting.code, role: "right" };
       }
@@ -69,6 +204,34 @@ export function createGameService(dbCtx) {
       `INSERT INTO pong_games (code, player1_id, player2_id, status, created_at, updated_at)
        VALUES (?, ?, NULL, 'waiting', ?, ?)`,
       [code, user.id, now, now]
+    );
+
+    return { code, role: "left" };
+  }
+
+  async function inviteToGame(playerAId, playerBId) {
+    const now = Math.floor(Date.now() / 1000);
+
+    // Block if friend truly is in an active game (stale cleaned already in matchmake)
+    const playerBGame = await dbGet(
+      `SELECT id
+         FROM pong_games
+        WHERE status = 'active'
+          AND (player1_id = ? OR player2_id = ?)
+        LIMIT 1`,
+      [playerBId, playerBId]
+    );
+
+    if (playerBGame) {
+      throw new Error("Player B is already in a game.");
+    }
+
+    const code = randomCode();
+
+    await dbRun(
+      `INSERT INTO pong_games (code, player1_id, player2_id, status, created_at, updated_at)
+       VALUES (?, ?, ?, 'waiting', ?, ?)`,
+      [code, playerAId, playerBId, now, now]
     );
 
     return { code, role: "left" };
@@ -129,13 +292,18 @@ export function createGameService(dbCtx) {
     }
 
     if (match.players.length === 0) {
+      // IMPORTANT: clean DB so players aren't stuck "already in a game"
+      abandonGameByCode(match.code).catch(() => {});
       matchesByCode.delete(match.code);
     }
   }
 
   async function persistMatchResult({ code, scoreLeft, scoreRight }) {
     const game = await dbGet(
-      `SELECT id, player1_id, player2_id, status FROM pong_games WHERE code = ? LIMIT 1`,
+      `SELECT id, player1_id, player2_id, status
+         FROM pong_games
+        WHERE code = ?
+        LIMIT 1`,
       [code]
     );
     if (!game) return;
@@ -180,6 +348,9 @@ export function createGameService(dbCtx) {
   }
 
   function tickAll() {
+    // keep DB clean in the background
+    cleanupWaitingGames().catch(() => {});
+
     for (const match of matchesByCode.values()) {
       if (match.ended) continue;
       if (match.players.length < 2) continue;
@@ -269,6 +440,33 @@ export function createGameService(dbCtx) {
     }
   }
 
-  return { matchmakeForUser, joinMatch, handleInput, handleDisconnect, tickAll };
+  async function getPendingInvitesForUser(userId) {
+    return await dbAll(
+      `SELECT g.code,
+              g.player1_id AS from_id,
+              u.username AS from_username,
+              u.display_name AS from_display_name,
+              g.created_at
+         FROM pong_games g
+         JOIN users u ON u.id = g.player1_id
+        WHERE g.status = 'waiting'
+          AND g.player2_id = ?
+        ORDER BY g.created_at DESC`,
+      [userId]
+    );
+  }
+
+  return {
+    matchmakeForUser,
+    inviteToGame,
+    joinMatch,
+    handleInput,
+    handleDisconnect,
+    tickAll,
+    cleanupWaitingGames,
+    getPendingInvitesForUser,
+  };
 }
+
+
 
