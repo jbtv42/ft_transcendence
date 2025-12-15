@@ -15,11 +15,11 @@ interface Friend {
   username: string;
   display_name: string;
   avatar_path?: string | null;
-  online: boolean; // ✅ backend sends boolean
+  online: boolean;
 }
 
 interface PendingRequest {
-  id: number; // ✅ this is requester_id
+  id: number;
   username: string;
   display_name: string;
   avatar_path?: string | null;
@@ -175,7 +175,6 @@ function enterPasswordEditMode(): void {
   if (inputNewPw) inputNewPw.value = "";
 }
 
-// ✅ online boolean, not status string
 function renderStatusDot(online: boolean): HTMLSpanElement {
   const span = document.createElement("span");
   span.className = "status-dot";
@@ -183,9 +182,6 @@ function renderStatusDot(online: boolean): HTMLSpanElement {
   return span;
 }
 
-// ---------------
-// API helper
-// ---------------
 async function apiJson<T>(url: string, init?: RequestInit): Promise<T> {
   const res = await fetch(url, {
     credentials: "include",
@@ -229,7 +225,6 @@ async function loadUser(): Promise<void> {
       void loadChat(false);
     }, 5000);
   } catch (e) {
-    // Not logged in -> go home
     window.location.href = "/";
   }
 }
@@ -402,13 +397,19 @@ async function loadFriends(): Promise<void> {
 
     friends.forEach((f) => {
       const row = document.createElement("div");
+
       const dot = renderStatusDot(!!f.online);
 
-      const name = document.createElement("span");
-      name.textContent = f.display_name || f.username || `User ${f.id}`;
+      const nameBtn = document.createElement("button");
+      nameBtn.textContent = f.display_name || f.username || `User ${f.id}`;
+      nameBtn.className = "friend-name-btn";
+
+      nameBtn.addEventListener("click", () => {
+        window.location.href = `viewProfile.html?userId=${f.id}`;
+      });
 
       row.appendChild(dot);
-      row.appendChild(name);
+      row.appendChild(nameBtn);
       friendsListDiv.appendChild(row);
     });
   } catch (e) {
@@ -416,11 +417,11 @@ async function loadFriends(): Promise<void> {
   }
 }
 
+
 async function loadPendingFriends(): Promise<void> {
   if (!pendingListDiv) return;
 
   try {
-    // ✅ backend returns { ok:true, pending:[...] }
     const data = await apiJson<any>("/api/friends/friends_pending", { method: "GET" });
 
     pendingListDiv.innerHTML = "";
@@ -465,7 +466,6 @@ async function loadPendingFriends(): Promise<void> {
   }
 }
 
-// ✅ payload must be { requester_id, accept }
 async function respondToRequest(requesterId: number, accept: boolean): Promise<void> {
   try {
     const res = await fetch("/api/friends/friend_respond", {

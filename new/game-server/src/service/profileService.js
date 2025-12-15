@@ -7,6 +7,27 @@ import { getPasswordHashById, updatePasswordHash, updateProfile, updateAvatarPat
 export function createProfileService(dbCtx) {
   const { dbGet, dbRun } = dbCtx;
 
+  async function getUserById(userId) {
+    try {
+      console.log(`Fetching user with ID: ${userId}`);
+      const user = await dbGet(
+        `SELECT id, email, username, display_name, avatar_path, wins, losses FROM users WHERE id = ? LIMIT 1`,
+        [userId]
+      );
+
+      console.log('Fetched user:', user);
+
+      if (!user) {
+        console.log(`User not found with ID: ${userId}`);
+      }
+
+      return user || null;
+    } catch (error) {
+      console.error('Error fetching user from DB:', error);
+      throw new Error('Database error while fetching user');
+    }
+  }
+
   async function updateProfileInfo(userId, payload) {
     const email = payload?.email !== undefined ? String(payload.email).trim() : undefined;
     const username = payload?.username !== undefined ? String(payload.username).trim() : undefined;
@@ -59,5 +80,6 @@ export function createProfileService(dbCtx) {
     return publicPath;
   }
 
-  return { updateProfileInfo, changePassword, saveAvatarFile };
+  return { getUserById, updateProfileInfo, changePassword, saveAvatarFile };
 }
+

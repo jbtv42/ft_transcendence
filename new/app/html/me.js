@@ -148,16 +148,12 @@ function enterPasswordEditMode() {
     if (inputNewPw)
         inputNewPw.value = "";
 }
-// ✅ online boolean, not status string
 function renderStatusDot(online) {
     const span = document.createElement("span");
     span.className = "status-dot";
     span.style.background = online ? "#22c55e" : "#6b7280";
     return span;
 }
-// ---------------
-// API helper
-// ---------------
 async function apiJson(url, init) {
     var _a;
     const res = await fetch(url, Object.assign({ credentials: "include", headers: Object.assign({ Accept: "application/json" }, ((_a = init === null || init === void 0 ? void 0 : init.headers) !== null && _a !== void 0 ? _a : {})) }, init));
@@ -195,7 +191,6 @@ async function loadUser() {
         }, 5000);
     }
     catch (e) {
-        // Not logged in -> go home
         window.location.href = "/";
     }
 }
@@ -346,10 +341,14 @@ async function loadFriends() {
         friends.forEach((f) => {
             const row = document.createElement("div");
             const dot = renderStatusDot(!!f.online);
-            const name = document.createElement("span");
-            name.textContent = f.display_name || f.username || `User ${f.id}`;
+            const nameBtn = document.createElement("button");
+            nameBtn.textContent = f.display_name || f.username || `User ${f.id}`;
+            nameBtn.className = "friend-name-btn";
+            nameBtn.addEventListener("click", () => {
+                window.location.href = `viewProfile.html?userId=${f.id}`;
+            });
             row.appendChild(dot);
-            row.appendChild(name);
+            row.appendChild(nameBtn);
             friendsListDiv.appendChild(row);
         });
     }
@@ -361,7 +360,6 @@ async function loadPendingFriends() {
     if (!pendingListDiv)
         return;
     try {
-        // ✅ backend returns { ok:true, pending:[...] }
         const data = await apiJson("/api/friends/friends_pending", { method: "GET" });
         pendingListDiv.innerHTML = "";
         const pending = Array.isArray(data.pending) ? data.pending : [];
@@ -399,7 +397,6 @@ async function loadPendingFriends() {
         console.error(e);
     }
 }
-// ✅ payload must be { requester_id, accept }
 async function respondToRequest(requesterId, accept) {
     try {
         const res = await fetch("/api/friends/friend_respond", {

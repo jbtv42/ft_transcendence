@@ -38,4 +38,25 @@ export function registerProfileRoutes(app, { authService, profileService }) {
     const publicPath = await profileService.saveAvatarFile(me.id, { bytes: buf, ext });
     return reply.send({ ok: true, avatar_path: publicPath });
   });
+
+  app.get('/api/user/profile', async (req, reply) => {
+    const userId = req.query.id;
+    if (!userId) {
+      return reply.code(400).send({ ok: false, error: 'User ID is required' });
+    }
+
+    try {
+      const user = await profileService.getUserById(userId);
+      if (!user) {
+        return reply.code(404).send({ ok: false, error: 'User not found' });
+      }
+
+      return reply.send({ ok: true, user });
+    } catch (error) {
+      console.error('Error fetching user profile:', error); // Log the error
+      return reply.code(500).send({ ok: false, error: 'Internal Server Error', details: error.message });
+    }
+  });
 }
+
+

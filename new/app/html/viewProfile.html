@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>View Profile</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="profile.css" />
+  <script src="viewProfile.js" defer></script>
+</head>
+<body>
+  <div class="card">
+    <div class="profile-header">
+      <div class="avatar" id="avatarBox">
+        <span id="avatarInitials">?</span>
+      </div>
+      <div>
+        <h1 id="title">User Profile</h1>
+        <div class="subtitle" id="subtitle">Loading user...</div>
+      </div>
+    </div>
+
+    <div id="profile">
+      <div class="section-title">Account Information</div>
+      <div class="row">
+        <span class="label">Email</span>
+        <span class="value-text" id="viewEmail"></span>
+      </div>
+      <div class="row">
+        <span class="label">Username</span>
+        <span class="value-text" id="viewUsername"></span>
+      </div>
+      <div class="row">
+        <span class="label">Display Name</span>
+        <span class="value-text" id="viewDisplayName"></span>
+      </div>
+
+      <div class="section-title">Stats</div>
+      <div class="stats-row">Wins: <span id="fieldWins"></span></div>
+      <div class="stats-row">Losses: <span id="fieldLosses"></span></div>
+
+      <div class="inline-buttons">
+        <button id="backBtn">Back to Friends List</button>
+      </div>
+    </div>
+
+    <div id="message"></div>
+  </div>
+</body>
+</html>
