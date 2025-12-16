@@ -16,7 +16,6 @@ small err :
     
 to add :
   - User + game dashbord +1
-  - Game customization +1
   - support multiple devices +1
   - expanding browser compatibility +1
   - multiple languages +1
@@ -26,4 +25,11 @@ to add :
   - new game +2
   - finish chat +2
 
-14 -> 23 / 17
+14 -> 22 / 17
+
+Game dashboad :
+  big ass dashboard in independent ranking page
+  small ass dashboard at hte end of the page (dynamic lsit of games)
+
+new game :
+  tic tac to ?
