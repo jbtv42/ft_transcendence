@@ -32,4 +32,6 @@ Game dashboad :
   small ass dashboard at hte end of the page (dynamic lsit of games)
 
 new game :
-  tic tac to ?
+  rock paper sacissors spok
+
+ip a to get local ip
